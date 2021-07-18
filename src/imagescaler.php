@@ -1,5 +1,7 @@
 <?php
 
+namespace semmelsamu;
+
 class Imagescaler 
 {
     /**
@@ -54,7 +56,7 @@ class Imagescaler
      * @param int $scale the size of the smallest side
      * @param int $width the new width of the image
      * @param int $height the new height of the image
-     * Only one parameter can be processed.
+     * Only one parameter can be processed. If no size is specified, the image will be scaled to 256 pixels.
      * TODO: force parameter, to strech the image if nessecary
      */
     function scale($scale = -1, $width = -1, $height = -1)
@@ -103,6 +105,5 @@ class Imagescaler
         exit;
     }
 }
-
 
 ?>
