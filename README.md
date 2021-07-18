@@ -43,6 +43,12 @@ Automatically detect commands via GET and scale the image
 ```php
 $imagescaler->get(): void
 ```
+Available get parameters are:
+- `s`: The size of the smallest side
+- `w`: The new width of the image
+- `h`: The new height of the image
+
+Only one parameter can be processed.
 
 ### valid
 
@@ -52,7 +58,7 @@ $imagescaler->scale(int $scale = -1, int $width = -1, int $height = -1): void
 ```
 - `$scale`: The size of the smallest side
 - `$width`: The new width of the image
-- `$height`: The new height of the imageimage
+- `$height`: The new height of the image
 
 Only one parameter can be processed. If no size is specified, the image will be scaled to 256 pixels.
 
@@ -65,7 +71,7 @@ $imagescaler->output(): void
 
 ## Auto-scale
 
-If you create a new instance of the Imagescaler and give it the image as a parameter, it will automatically import, scale and output it.
+If you create a new instance of the Imagescaler and give it the image as a parameter, it will automatically import, scale it via GET parameters and output it.
 
 ```php
 new Imagescaler($image);
