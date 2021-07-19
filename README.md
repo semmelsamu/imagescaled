@@ -6,7 +6,7 @@
 
 Copy `imagescaled.php` a static location on your webserver and include the file. Use the namespace `semmelsamu`:
 ```php
-include("imagescaler.php");
+include("imagescaled.php");
 use \semmelsamu\Imagescaled;
 ```
 
