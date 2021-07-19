@@ -47,8 +47,15 @@ class Imagescaled
         // Don't rescale image if it has been cached
         if(!($this->cache && file_exists($this->cache.$key)))
         {
-            $this->result = imagecreatetruecolor($new_width, $new_height);
-            imagecopyresampled($this->result, imagecreatefromjpeg($this->image), 0, 0, 0, 0, $new_width, $new_height, $original_width, $original_height);
+            switch(substr($this->image, strrpos($this->image, ".")+1))
+            {
+                case "jpg": $original_image = imagecreatefromjpeg($this->image); break;
+                case "jpeg": $original_image = imagecreatefromjpeg($this->image); break;
+                default: return false; // Image type not supported
+            }
+
+            $this->result = imagecreatetruecolor($new_width-($left+$right)*$new_width/$original_width, $new_height-($top+$bottom)*$new_height/$original_height);
+            imagecopyresampled($this->result, $original_image, 0, 0, $left, $top, $new_width, $new_height, $original_width, $original_height);
         }
 
         if($this->cache)
