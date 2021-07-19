@@ -2,78 +2,82 @@
 
 > Small image scaler class for PHP
 
-## Installation
-
-Copy this repo to a static location on your webserver.
-Include the `index.php` file:
-```php
-include("imagescaler/index.php");
-```
-
 ## Setup
 
-Use the namespace `semmelsamu` and create a new instance of the scaler:
+Copy `imagescaled.php` a static location on your webserver and include the file. Use the namespace `semmelsamu`:
 ```php
-use \semmelsamu\Imagescaler;
-$imagescaler = new Imagescaler();
+include("imagescaler.php");
+use \semmelsamu\Imagescaled;
 ```
 
 ## Functions
 
-### valid
-
-Check if the Imagescaler can work with the given image
-```php
-$imagescaler->valid(string $image): bool
-```
-- `$image`: Path to the image
-- `return`: Returns true if the scaler can work with the given image
-
-### import
-
-Import an image
-```php
-$imagescaler->import(string $image): void
-```
-- `$image`: Path to the image
-
-### get
-
-Automatically detect commands via GET and scale the image
-```php
-$imagescaler->get(): void
-```
-Available get parameters are:
-- `s`: The size of the smallest side
-- `w`: The new width of the image
-- `h`: The new height of the image
-
-Only one parameter can be processed.
-
-### valid
-
-Check if the Imagescaler can work with the given image
-```php
-$imagescaler->scale(int $scale = -1, int $width = -1, int $height = -1): void
-```
-- `$scale`: The size of the smallest side
-- `$width`: The new width of the image
-- `$height`: The new height of the image
-
-Only one parameter can be processed. If no size is specified, the image will be scaled to 256 pixels.
-
-### get
-
-Output the image
-```php
-$imagescaler->output(): void
-```
-
-## Auto-scale
-
-If you create a new instance of the Imagescaler and give it the image as a parameter, it will automatically import, scale it via GET parameters and output it.
+### Imagescaled
 
 ```php
-new Imagescaler($image);
+new Imagescaled($image, [$auto, $cache, $max_size]);
 ```
-- `$image`: Path to the image
+Create a new Imagescaler.
+
+**Prameters**
+- `$image`
+    - The path/filename of the image, e.g. `path/to/your/image.jpg`.
+    - Type: `string`
+- `$auto`
+    - States if the scaler yould automatically scale and output your image with arguments passed via GET in the URL [see here](#automatically-scaling).
+    - Type: `bool`
+    - Default: `true`
+- `$cache`
+    - The folder where already scaled images should be cached. If set to `false`, scaled images will not be cached.
+    - Type: `bool|string`
+    - Default: `cache/`
+- `$max_size`
+    - The maximum size of an image's edge. If set to `false`, images don't have a maximum size. This is not recommended.
+    - Type: `bool|int`
+    - Default: `2000`
+
+### output
+
+```php
+Imagescaled::output([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) 
+```
+
+Output an image. **Every parameter is optional.**
+
+- `$width` and `$height`
+    - The width and height of the scaled image. If only one is given, the other will be automatically calculated.
+    - Type: `int`
+- `$size`
+    - The size of the smallest edge of the scaled image.
+    - Type: `int`
+- `$top`, `$right`, `$bottom` and `$left`
+    - The amount of pixels cropped into the image from the top, right, bottom and left before the image is scaled.
+    - Type: `int`
+    - Default: `0`
+- `$format`
+    - The image type of the image output.
+    - Type: `"jpg"|"png"`
+- `$quality`
+    - The quality of the image output. For more information, see in the PHP manual for [JPGs](https://www.php.net/manual/en/function.imagejpeg.php) and [PNGs](https://www.php.net/manual/en/function.imagepng.php) respectively.
+    - Type: `int`
+
+## Auto scaling
+
+If `$auto` is set to `true`, images will be automatically scaled via GET-parameters in the URL:
+
+```
+www.url.to/your/image.jpg?w=500
+```
+
+will produce an image with a width of 500 pixels.
+
+### Abbreviations
+- `w` for `$width`
+- `h` for `$height`
+- `s` for `$size`
+- `t` for `$top`
+- `r` for `$right`
+- `b` for `$bottom`
+- `l` for `$left`
+- `f` for `$format`
+- `q` for `$quality`
