@@ -31,6 +31,10 @@ Create a new Imagescaler.
     - The folder where already scaled images should be cached. If set to `false`, scaled images will not be cached.
     - Type: `bool|string`
     - Default: `cache/`
+- `$cache_expires`
+    - The time in seconds a cached image takes to be deleted again.
+    - Type: `int`
+    - Default: `86400` (= 1 day)
 - `$max_size`
     - The maximum size of an image's edge. If set to `false`, images don't have a maximum size. This is not recommended.
     - Type: `bool|int`

@@ -4,11 +4,12 @@ namespace semmelsamu;
 
 class Imagescaled
 {
-    function __construct($image, $auto = true, $cache = "cache/", $max_size = 2000) 
+    function __construct($image, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
     {
         $this->image = $image;
         $this->cache = $cache;
         $this->max_size = $max_size;
+        $this->cache_expires = $cache_expires;
 
         if($auto)
         {
@@ -23,6 +24,27 @@ class Imagescaled
             $quality = isset($_GET["q"]) ? $_GET["q"] : null;
 
             $this->output($width, $height, $size, $top, $right, $bottom, $left, $format, $quality);
+
+            $this->empty_cache();
+
+            exit;
+        }
+    }
+
+    function empty_cache()
+    {
+        if(!$this->cache) 
+            return;
+
+        foreach(scandir($this->cache) as $file)
+        {
+            if(strpos($file, ".") == false)
+            {
+                if((filectime($this->cache.$file)+$this->cache_expires) < time())
+                {
+                    unlink($this->cache.$file);
+                }
+            }
         }
     }
 
@@ -103,11 +125,9 @@ class Imagescaled
                 default: return false; break; // Image type not supported
             }
         }
-
-        exit;
     }
 
-    function calc_size($size = null, $width = null, $height = null)
+    private function calc_size($size = null, $width = null, $height = null)
     {
         list($original_width, $original_height) = getimagesize($this->image);
 
