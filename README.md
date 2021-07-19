@@ -1,4 +1,4 @@
-# Imagescaler
+# Imagescaled
 
 > Small image scaler class for PHP
 
