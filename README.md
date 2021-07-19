@@ -1,6 +1,6 @@
 # Imagescaled
 
-> Small image scaler class for PHP
+> Small image scaling and cropping class with simple caching for PHP
 
 ## Setup
 
