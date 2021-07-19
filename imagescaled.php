@@ -103,6 +103,8 @@ class Imagescaled
                 default: return false; break; // Image type not supported
             }
         }
+
+        exit;
     }
 
     function calc_size($size = null, $width = null, $height = null)
@@ -139,11 +141,11 @@ class Imagescaled
         }
 
         // Images can't be bigger than max size
-        if($new_height > $this->max_size)
+        if($this->max_size && $new_height > $this->max_size)
         {
             return $this->calc_size(height: $this->max_size);
         }
-        if($new_width > $this->max_size)
+        if($this->max_size && $new_width > $this->max_size)
         {
             return $this->calc_size(width: $this->max_size);
         }
