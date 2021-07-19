@@ -24,7 +24,7 @@ Create a new Imagescaler.
     - The path/filename of the image, e.g. `path/to/your/image.jpg`.
     - Type: `string`
 - `$auto`
-    - States if the scaler yould automatically scale and output your image with arguments passed via GET in the URL [see here](#automatically-scaling).
+    - States if the scaler yould automatically scale and output your image with arguments passed via GET in the URL [see here](#auto-scaling).
     - Type: `bool`
     - Default: `true`
 - `$cache`
