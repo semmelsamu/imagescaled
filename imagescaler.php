@@ -31,14 +31,18 @@ class Imagescaled
         // Get new image dimensions
         extract($this->calc_size($size, $width, $height));
         
-        if(!isset($format) || $format == "jpeg")
+        if(!isset($format))
+            $format = substr($this->image, strrpos($this->image, ".")+1);
+
+        if($format == "jpeg")
             $format = "jpg";
 
         if(!isset($quality))
         {
-            if($format == "jpg")
+            switch($format)
             {
-                $quality = 80;
+                case "jpg": $quality = 80; break;
+                case "png": $quality = -1; break;
             }
         }
         
@@ -51,7 +55,8 @@ class Imagescaled
             {
                 case "jpg": $original_image = imagecreatefromjpeg($this->image); break;
                 case "jpeg": $original_image = imagecreatefromjpeg($this->image); break;
-                default: return false; // Image type not supported
+                case "png": $original_image = imagecreatefrompng($this->image); break;
+                default: return false; break; // Image type not supported
             }
 
             $this->result = imagecreatetruecolor($new_width-($left+$right)*$new_width/$original_width, $new_height-($top+$bottom)*$new_height/$original_height);
@@ -68,9 +73,11 @@ class Imagescaled
                     mkdir($this->cache);
 
                 // Save the image
-                if($format == "jpg")
+                switch($format)
                 {
-                    imagejpeg($this->result, $this->cache.$key, $quality);
+                    case "jpg": imagejpeg($this->result, $this->cache.$key, $quality); break;
+                    case "png": imagepng($this->result, $this->cache.$key, $quality); break;
+                    default: return false; break; // Image type not supported
                 }
             }
 
@@ -81,10 +88,19 @@ class Imagescaled
         else
         {
             // Output the image directly
-            if($format == "jpg")
+            switch($format)
             {
-                header("Content-Type: image/jpeg");
-                imagejpeg($this->result, null, $quality);
+                case "jpg":
+                    header("Content-Type: image/jpeg");
+                    imagejpeg($this->result, null, $quality);
+                    break;
+
+                case "png":
+                    header("Content-Type: image/png");
+                    imagepng($this->result, null, $quality);
+                    break;
+
+                default: return false; break; // Image type not supported
             }
         }
     }
