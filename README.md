@@ -36,7 +36,7 @@ Create a new Imagescaler.
     - Type: `int`
     - Default: `86400` (= 1 day)
 - `$max_size`
-    - The maximum size of an image's edge. If set to `false`, images don't have a maximum size. This is not recommended.
+    - The maximum size of an image's edge. If set to `false`, images don't have a maximum size (not recommended).
     - Type: `bool|int`
     - Default: `2000`
 
@@ -54,6 +54,10 @@ Output an image. **Every parameter is optional.**
 - `$width` and `$height`
     - The width and height of the scaled image. If only one is given, the other will be automatically calculated.
     - Type: `int`
+- `$crop`
+    - States if the image should be automatically cropped if the new dimensions don't match its native resolution
+    - Type: `bool`
+    - Default: `true`
 - `$size`
     - The size of the smallest edge of the scaled image.
     - Type: `int`

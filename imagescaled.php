@@ -137,23 +137,10 @@ class Imagescaled
 
     private function calc_dimensions()
     {
-        // Default values
-
         list($this->src_width, $this->src_height) = getimagesize($this->path);
 
-        $this->canvas_width = $this->src_width;
-        $this->canvas_height = $this->src_height;
 
-        $this->dst_x = 0;
-        $this->dst_y = 0;
-        $this->src_x = 0;
-        $this->src_y = 0;
-
-        $this->dst_width = $this->src_width;
-        $this->dst_height = $this->src_height;
-
-
-        // Size overwriting
+        // Process size parameter
 
         if(isset($this->size))
         {
@@ -170,54 +157,79 @@ class Imagescaled
         }
 
 
-        // Calculating
+        // Set width and height
 
-        if(isset($this->width, $this->height))
+        if(!isset($this->width) && !isset($this->height))
         {
-            $this->canvas_width = $this->width;
-            $this->canvas_height = $this->height;
-
-            if($this->crop)
-            {
-                if($this->canvas_width > $this->canvas_height)
-                {
-                    $this->dst_width = $this->canvas_width;
-                    $this->dst_height = $this->canvas_width*($this->src_height/$this->src_width);
-                    $this->dst_y -= ($this->dst_height-$this->canvas_height)/2;
-                }
-                else
-                {
-                    $this->dst_height = $this->canvas_height;
-                    $this->dst_width = $this->canvas_height*($this->src_width/$this->src_height);
-                    $this->dst_x -= ($this->dst_width-$this->canvas_width)/2;
-                }
-            }
-            else
-            {
-                $this->dst_width = $this->canvas_width;
-                $this->dst_height = $this->canvas_height;
-            }
+            $this->width = $this->src_width;
+            $this->height = $this->src_height;
         }
-        else if(isset($this->width) || isset($this->height))
+        else if(isset($this->width) && !isset($this->height))
         {
-            if(isset($this->width))
-            {
-                $this->canvas_width = $this->width;
-                $this->canvas_height = $this->width*($this->src_height/$this->src_width);
-            }
-            else if(isset($this->height))
-            {
-                $this->canvas_height = $this->height;
-                $this->canvas_width = $this->height*($this->src_width/$this->src_height);
-            }
-
-            $this->dst_y -= $this->top*($this->canvas_height/($this->src_height-$this->top));
-            $this->src_height = $this->src_height;
-
-            $this->dst_width = $this->canvas_width;
-            $this->dst_height = $this->canvas_height;
+            $this->height = $this->src_height * ($this->width / $this->src_width);
+        }
+        else if(isset($this->height) && !isset($this->width))
+        {
+            $this->width = $this->src_width * ($this->height / $this->src_height);
         }
 
+
+        // Process cropping
+        
+        $this->scale_h = $this->width / $this->src_width;
+        $this->scale_v = $this->height / $this->src_height;
+
+        if($this->crop)
+        {
+            if($this->scale_h < $this->scale_v)
+            {
+                $crop_h = abs(($this->src_width * $this->scale_v - $this->width) / $this->scale_v) / 2;
+                $this->top += $crop_h;
+                $this->bottom += $crop_h;
+            }
+            else if($this->scale_h > $this->scale_v)
+            {
+                $crop_v = abs(($this->src_height * $this->scale_h - $this->height) / $this->scale_h) / 2;
+                $this->top += $crop_v;
+                $this->bottom += $crop_v;
+            }
+        }
+
+
+        // Set scale variables
+
+        $this->canvas_width = $this->width;
+        $this->canvas_height = $this->height;
+
+        $this->dst_x = 0;
+        $this->dst_y = 0;
+        $this->src_x = $this->left;
+        $this->src_y = $this->top;
+        $this->dst_width = $this->canvas_width;
+        $this->dst_height = $this->canvas_height;
+        $this->src_width -= $this->left + $this->right;
+        $this->src_height -= $this->top + $this->bottom;
+
+
+        // Max Size
+
+        if($this->max_size)
+        {
+            if($this->canvas_width > $this->max_size)
+            {
+                $this->width = $this->max_size;
+                $this->height = null;
+                $this->size = null;
+                $this->calc_dimensions();
+            }
+            else if($this->canvas_height > $this->max_size)
+            {
+                $this->height = $this->max_size;
+                $this->width = null;
+                $this->size = null;
+                $this->calc_dimensions();
+            }
+        }
     }
 
 
@@ -225,8 +237,14 @@ class Imagescaled
     {
         $this->cache_key = md5(
             $this->path."?".
-            $this->width.".".$this->height.".".
-            $this->dst_x.".". $this->dst_y.".". $this->src_x.".". $this->src_y.".". $this->dst_width.".". $this->dst_height.".". $this->src_width.".". $this->src_height.".".
+            $this->dst_x.".".
+            $this->dst_y.".". 
+            $this->src_x.".". 
+            $this->src_y.".". 
+            $this->dst_width.".". 
+            $this->dst_height.".". 
+            $this->src_width.".". 
+            $this->src_height.".".
             $this->format.".".$this->quality
         );
     }
@@ -282,8 +300,8 @@ class Imagescaled
         // Save the image
         switch($this->format)
         {
-            case "jpg": imagejpeg($this->result, $this->cache.$this->cache_key, $this->quality); break;
-            case "png": imagepng($this->result, $this->cache.$this->cache_key, $this->quality); break;
+            case "jpg": imagejpeg($this->image, $this->cache.$this->cache_key, $this->quality); break;
+            case "png": imagepng($this->image, $this->cache.$this->cache_key, $this->quality); break;
         }
     }
 
