@@ -6,6 +6,12 @@ class Imagescaled
 {
     function __construct($image, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
     {
+        if(!file_exists($image))
+        {
+            throw new \Exception("Image '$image' does not exist."); 
+            exit;
+        }
+
         $this->image = $image;
         $this->cache = $cache;
         $this->max_size = $max_size;
