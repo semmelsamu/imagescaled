@@ -82,6 +82,8 @@ class Imagescaled
             }
 
             $this->result = imagecreatetruecolor($new_width-($left+$right)*$new_width/$original_width, $new_height-($top+$bottom)*$new_height/$original_height);
+            imagealphablending($this->result, false);
+            imagesavealpha($this->result, true);
             imagecopyresampled($this->result, $original_image, 0, 0, $left, $top, $new_width, $new_height, $original_width, $original_height);
         }
 
