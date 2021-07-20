@@ -183,11 +183,13 @@ class Imagescaled
                 {
                     $this->dst_width = $this->canvas_width;
                     $this->dst_height = $this->canvas_width*($this->src_height/$this->src_width);
+                    $this->dst_y -= ($this->dst_height-$this->canvas_height)/2;
                 }
                 else
                 {
                     $this->dst_height = $this->canvas_height;
                     $this->dst_width = $this->canvas_height*($this->src_width/$this->src_height);
+                    $this->dst_x -= ($this->dst_width-$this->canvas_width)/2;
                 }
             }
             else
@@ -208,6 +210,9 @@ class Imagescaled
                 $this->canvas_height = $this->height;
                 $this->canvas_width = $this->height*($this->src_width/$this->src_height);
             }
+
+            $this->dst_y -= $this->top*($this->canvas_height/($this->src_height-$this->top));
+            $this->src_height = $this->src_height;
 
             $this->dst_width = $this->canvas_width;
             $this->dst_height = $this->canvas_height;
