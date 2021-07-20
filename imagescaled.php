@@ -1,41 +1,52 @@
 <?php
 
 namespace semmelsamu;
+function db($variable, $exit = false) {echo "\n\n<pre>"; var_dump($variable); echo "</pre>\n\n"; if($exit) exit;}
 
 class Imagescaled
 {
-    function __construct($image, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
+    function __construct($path, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
     {
-        if(!file_exists($image))
-        {
-            throw new \Exception("Image '$image' does not exist."); 
-            exit;
-        }
-
-        $this->image = $image;
-        $this->cache = $cache;
-        $this->max_size = $max_size;
-        $this->cache_expires = $cache_expires;
+        // Import all parameters
+        foreach(get_defined_vars() as $key => $val)
+            $this->$key = $val;
 
         if($auto)
-        {
+        {   
+            $width = isset($_GET["w"]) ? $_GET["w"] : null;
+            $height = isset($_GET["h"]) ? $_GET["h"] : null;
+            $crop = isset($_GET["c"]) ? $_GET["c"] : 1;
+            $size = isset($_GET["s"]) ? $_GET["s"] : null;
+
             $top = isset($_GET["t"]) ? $_GET["t"] : 0;
             $right = isset($_GET["r"]) ? $_GET["r"] : 0;
             $bottom = isset($_GET["b"]) ? $_GET["b"] : 0;
             $left = isset($_GET["l"]) ? $_GET["l"] : 0;
-            $size = isset($_GET["s"]) ? $_GET["s"] : null;
-            $width = isset($_GET["w"]) ? $_GET["w"] : null;
-            $height = isset($_GET["h"]) ? $_GET["h"] : null;
-            $format = isset($_GET["f"]) ? $_GET["f"] : null;
-            $quality = isset($_GET["q"]) ? $_GET["q"] : null;
 
-            $this->output($width, $height, $size, $top, $right, $bottom, $left, $format, $quality);
+            $format = isset($_GET["f"]) ? $_GET["f"] : null;
+            $quality = isset($_GET["q"]) ? $_GET["q"] : -1;
+
+            $this->image(
+                width: $width, 
+                height: $height, 
+                crop: $crop, 
+                size: $size, 
+
+                top: $top, 
+                right: $right, 
+                bottom: $bottom, 
+                left: $left, 
+
+                format: $format, 
+                quality: $quality
+            );
 
             $this->empty_cache();
 
             exit;
         }
     }
+
 
     function empty_cache()
     {
@@ -54,138 +65,237 @@ class Imagescaled
         }
     }
 
-    function output($width = null, $height = null, $size = null, $top = 0, $right = 0, $bottom = 0, $left = 0, $format = null, $quality = null) 
+
+    function image(
+        $width = null, 
+        $height = null, 
+        $crop = true, 
+        $size = null, 
+
+        $top = 0, 
+        $right = 0, 
+        $bottom = 0, 
+        $left = 0, 
+
+        $format = null, 
+        $quality = -1
+    ) 
     {
-        // Get new image dimensions
-        extract($this->calc_size($size, $width, $height));
-        
-        if(!isset($format))
-            $format = substr($this->image, strrpos($this->image, ".")+1);
+        // Import all parameters
+        foreach(get_defined_vars() as $key => $val)
+            $this->$key = $val;
 
-        if($format == "jpeg")
-            $format = "jpg";
+        $this->process_inputs();
+        $this->calc_dimensions();
+        $this->generate_cache_key();
 
-        if(!isset($quality))
+        if(!$this->cache || ($this->cache && !$this->image_cached()))
         {
-            switch($format)
-            {
-                case "jpg": $quality = 80; break;
-                case "png": $quality = -1; break;
-            }
+            $this->import_image();
+            $this->render_image();
         }
         
-        $key = md5($this->image."?".$new_width.".".$new_height.".".$top.".".$right.".".$bottom.".".$left.".".$format.".".$quality);
-
-        // Don't rescale image if it has been cached
-        if(!($this->cache && file_exists($this->cache.$key)))
-        {
-            switch(substr($this->image, strrpos($this->image, ".")+1))
-            {
-                case "jpg": $original_image = imagecreatefromjpeg($this->image); break;
-                case "jpeg": $original_image = imagecreatefromjpeg($this->image); break;
-                case "png": $original_image = imagecreatefrompng($this->image); break;
-                default: return false; break; // Image type not supported
-            }
-
-            $this->result = imagecreatetruecolor($new_width-($left+$right)*$new_width/$original_width, $new_height-($top+$bottom)*$new_height/$original_height);
-            imagealphablending($this->result, false);
-            imagesavealpha($this->result, true);
-            imagecopyresampled($this->result, $original_image, 0, 0, $left, $top, $new_width, $new_height, $original_width, $original_height);
-        }
-
         if($this->cache)
         {
-            // Cache the image
-            if(!file_exists($this->cache.$key))
+            if(!$this->image_cached())
             {
-                // Create cache folder
-                if (!file_exists($this->cache))
-                    mkdir($this->cache);
-
-                // Save the image
-                switch($format)
-                {
-                    case "jpg": imagejpeg($this->result, $this->cache.$key, $quality); break;
-                    case "png": imagepng($this->result, $this->cache.$key, $quality); break;
-                    default: return false; break; // Image type not supported
-                }
+                $this->cache_image();
             }
-
-            // Output the cached image
-            header("Content-Type: ".mime_content_type($this->cache.$key));
-            readfile($this->cache.$key);
+            $this->output_cached_image();
         }
         else
         {
-            // Output the image directly
-            switch($format)
-            {
-                case "jpg":
-                    header("Content-Type: image/jpeg");
-                    imagejpeg($this->result, null, $quality);
-                    break;
-
-                case "png":
-                    header("Content-Type: image/png");
-                    imagepng($this->result, null, $quality);
-                    break;
-
-                default: return false; break; // Image type not supported
-            }
+            $this->output_rendered_image();
         }
     }
 
-    private function calc_size($size = null, $width = null, $height = null)
-    {
-        list($original_width, $original_height) = getimagesize($this->image);
 
-        if(isset($width))
+    private function process_inputs()
+    {
+        // File exists
+
+        if(!file_exists($this->path))
+            throw new \Exception("Image '$this->path' does not exist."); 
+        
+
+        // Image formats
+
+        $valid_formats = ["jpg", "jpeg", "png"];
+
+        $this->src_format = substr($this->path, strrpos($this->path, ".")+1);
+        
+        if($this->src_format == "jpeg")
+            $this->src_format = "jpg";
+        
+        if(!isset($this->format))
+            $this->format = $this->src_format;
+
+        if(!in_array($this->src_format, $valid_formats) || !in_array($this->format, $valid_formats))
+            throw new \Exception("Image format $this->src_format>>$this->format is not supported.");
+    }
+
+
+    private function calc_dimensions()
+    {
+        // Default values
+
+        list($this->src_width, $this->src_height) = getimagesize($this->path);
+
+        $this->canvas_width = $this->src_width;
+        $this->canvas_height = $this->src_height;
+
+        $this->dst_x = 0;
+        $this->dst_y = 0;
+        $this->src_x = 0;
+        $this->src_y = 0;
+
+        $this->dst_width = $this->src_width;
+        $this->dst_height = $this->src_height;
+
+
+        // Size overwriting
+
+        if(isset($this->size))
         {
-            $new_width = $width;
-            $new_height = $new_width * ($original_height / $original_width);
-        }
-        else if(isset($height))
-        {
-            $new_height = $height;
-            $new_width = $new_height * ($original_width / $original_height);
-        }
-        else if(isset($size))
-        {
-            if($original_width < $original_height)
+            if($this->src_width < $this->src_height)
             {
-                $new_width = $size;
-                $new_height = $new_width * ($original_height / $original_width);
+                $this->width = $this->size;
+                $this->height = null;
             }
             else
             {
-                $new_height = $size;
-                $new_width = $new_height * ($original_width / $original_height);
+                $this->width = null;
+                $this->height = $this->size;
             }
         }
-        else
+
+
+        // Calculating
+
+        if(isset($this->width, $this->height))
         {
-            $new_width = $original_width;
-            $new_height = $original_height;
+            $this->canvas_width = $this->width;
+            $this->canvas_height = $this->height;
+
+            if($this->crop)
+            {
+                if($this->canvas_width > $this->canvas_height)
+                {
+                    $this->dst_width = $this->canvas_width;
+                    $this->dst_height = $this->canvas_width*($this->src_height/$this->src_width);
+                }
+                else
+                {
+                    $this->dst_height = $this->canvas_height;
+                    $this->dst_width = $this->canvas_height*($this->src_width/$this->src_height);
+                }
+            }
+            else
+            {
+                $this->dst_width = $this->canvas_width;
+                $this->dst_height = $this->canvas_height;
+            }
+        }
+        else if(isset($this->width) || isset($this->height))
+        {
+            if(isset($this->width))
+            {
+                $this->canvas_width = $this->width;
+                $this->canvas_height = $this->width*($this->src_height/$this->src_width);
+            }
+            else if(isset($this->height))
+            {
+                $this->canvas_height = $this->height;
+                $this->canvas_width = $this->height*($this->src_width/$this->src_height);
+            }
+
+            $this->dst_width = $this->canvas_width;
+            $this->dst_height = $this->canvas_height;
         }
 
-        // Images can't be bigger than max size
-        if($this->max_size && $new_height > $this->max_size)
-        {
-            return $this->calc_size(null, null, $this->max_size);
-        }
-        if($this->max_size && $new_width > $this->max_size)
-        {
-            return $this->calc_size(null, $this->max_size);
-        }
+    }
 
-        return array(
-            "new_width" => floor($new_width), 
-            "new_height" => floor($new_height), 
-            "original_width" => $original_width, 
-            "original_height" => $original_height,
+
+    private function generate_cache_key()
+    {
+        $this->cache_key = md5(
+            $this->path."?".
+            $this->width.".".$this->height.".".
+            $this->dst_x.".". $this->dst_y.".". $this->src_x.".". $this->src_y.".". $this->dst_width.".". $this->dst_height.".". $this->src_width.".". $this->src_height.".".
+            $this->format.".".$this->quality
         );
     }
 
+
+    private function image_cached()
+    {
+        return file_exists($this->cache.$this->cache_key);
+    }
+
+
+    private function import_image()
+    {
+        switch($this->src_format)
+        {
+            case "jpg": $this->src_image = imagecreatefromjpeg($this->path); break;
+            case "png": $this->src_image = imagecreatefrompng($this->path); break;
+        }
+    }
+
+
+    private function render_image()
+    {
+        $this->image = imagecreatetruecolor(
+            $this->canvas_width, 
+            $this->canvas_height
+        );
+
+        imagealphablending($this->image, false);
+        imagesavealpha($this->image, true);
+
+        imagecopyresampled(
+            $this->image, 
+            $this->src_image, 
+            $this->dst_x, 
+            $this->dst_y, 
+            $this->src_x, 
+            $this->src_y, 
+            $this->dst_width, 
+            $this->dst_height, 
+            $this->src_width, 
+            $this->src_height
+        );
+    }
+
+
+    private function cache_image()
+    {
+        // Create cache folder
+        if (!file_exists($this->cache))
+            mkdir($this->cache);
+
+        // Save the image
+        switch($this->format)
+        {
+            case "jpg": imagejpeg($this->result, $this->cache.$this->cache_key, $this->quality); break;
+            case "png": imagepng($this->result, $this->cache.$this->cache_key, $this->quality); break;
+        }
+    }
+
+    private function output_cached_image()
+    {
+        header("Content-Type: ".mime_content_type($this->cache.$this->cache_key));
+        readfile($this->cache.$this->cache_key);
+    }
+
+    private function output_rendered_image()
+    {
+        switch($this->format)
+        {
+            case "jpg": header("Content-Type: image/jpeg"); imagejpeg($this->image, null, $this->quality); break;
+            case "png": header("Content-Type: image/png"); imagepng($this->image, null, $this->quality); break;
+        }
+    }
 }
 
 ?>

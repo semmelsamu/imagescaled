@@ -1,6 +1,6 @@
 <?php
 
     include("../imagescaled.php");
-    new \semmelsamu\Imagescaled(image: "crop.png", cache: false);
+    new \semmelsamu\Imagescaled(path: "crop.png", cache: false);
 
 ?>

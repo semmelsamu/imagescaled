@@ -13,18 +13,18 @@ use \semmelsamu\Imagescaled;
 ## Imagescaled
 
 ```php
-new Imagescaled($image, [$auto, $cache, $max_size]) : void
+new Imagescaled($path, [$auto, $cache, $cache_expires, $max_size]) : void
 ```
 
 Create a new Imagescaler.
 
 #### Parameters
 
-- `$image`
+- `$path`
     - The path/filename of the image, e.g. `path/to/your/image.jpg`.
     - Type: `string`
 - `$auto`
-    - States if the scaler yould automatically scale and output your image with arguments passed via GET in the URL [see here](#auto-scaling).
+    - States if the scaler yould automatically scale and output your image with arguments passed via GET in the URL [see here](#auto-scaling) and deletes expired cached images.
     - Type: `bool`
     - Default: `true`
 - `$cache`
@@ -32,7 +32,7 @@ Create a new Imagescaler.
     - Type: `bool|string`
     - Default: `cache/`
 - `$cache_expires`
-    - The time in seconds a cached image takes to be deleted again.
+    - The expiration time for every cached element.
     - Type: `int`
     - Default: `86400` (= 1 day)
 - `$max_size`
@@ -41,10 +41,10 @@ Create a new Imagescaler.
     - Default: `2000`
 
 
-### output
+### image
 
 ```php
-Imagescaled::output([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) : bool
+Imagescaled::image([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) : bool
 ```
 
 Output an image. **Every parameter is optional.**
@@ -62,15 +62,25 @@ Output an image. **Every parameter is optional.**
     - Type: `int`
     - Default: `0`
 - `$format`
-    - The image type of the image output.
+    - The image type.
     - Type: `"jpg"|"png"`
 - `$quality`
-    - The quality of the image output. For more information, see in the PHP manual for [JPGs](https://www.php.net/manual/en/function.imagejpeg.php) and [PNGs](https://www.php.net/manual/en/function.imagepng.php) respectively.
+    - The quality of the image. For more information, see in the PHP manual for [JPGs](https://www.php.net/manual/en/function.imagejpeg.php) and [PNGs](https://www.php.net/manual/en/function.imagepng.php) respectively.
     - Type: `int`
+    - Default: `-1`
 
 #### Return values
 
 Returns `true` if the image could be processed, otherwise it returns `false`.
+
+
+### empty_cache
+
+```php
+Imagescaled::empty_cache() : void
+```
+
+Deletes every cached element older than `$cache_expires` seconds. By default the expiration time is set to 1 day.
 
 
 ## Auto scaling
