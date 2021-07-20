@@ -82,6 +82,8 @@ class Imagescaled
             }
 
             $this->result = imagecreatetruecolor($new_width-($left+$right)*$new_width/$original_width, $new_height-($top+$bottom)*$new_height/$original_height);
+            imagealphablending($this->result, false);
+            imagesavealpha($this->result, true);
             imagecopyresampled($this->result, $original_image, 0, 0, $left, $top, $new_width, $new_height, $original_width, $original_height);
         }
 
@@ -163,11 +165,11 @@ class Imagescaled
         // Images can't be bigger than max size
         if($this->max_size && $new_height > $this->max_size)
         {
-            return $this->calc_size(height: $this->max_size);
+            return $this->calc_size(null, null, $this->max_size);
         }
         if($this->max_size && $new_width > $this->max_size)
         {
-            return $this->calc_size(width: $this->max_size);
+            return $this->calc_size(null, $this->max_size);
         }
 
         return array(

@@ -10,16 +10,16 @@ include("imagescaled.php");
 use \semmelsamu\Imagescaled;
 ```
 
-## Functions
-
-### Imagescaled
+## Imagescaled
 
 ```php
-new Imagescaled($image, [$auto, $cache, $max_size]);
+new Imagescaled($image, [$auto, $cache, $max_size]) : void
 ```
+
 Create a new Imagescaler.
 
-**Prameters**
+#### Parameters
+
 - `$image`
     - The path/filename of the image, e.g. `path/to/your/image.jpg`.
     - Type: `string`
@@ -40,13 +40,16 @@ Create a new Imagescaler.
     - Type: `bool|int`
     - Default: `2000`
 
+
 ### output
 
 ```php
-Imagescaled::output([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) 
+Imagescaled::output([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) : bool
 ```
 
 Output an image. **Every parameter is optional.**
+
+#### Parameters
 
 - `$width` and `$height`
     - The width and height of the scaled image. If only one is given, the other will be automatically calculated.
@@ -65,6 +68,11 @@ Output an image. **Every parameter is optional.**
     - The quality of the image output. For more information, see in the PHP manual for [JPGs](https://www.php.net/manual/en/function.imagejpeg.php) and [PNGs](https://www.php.net/manual/en/function.imagepng.php) respectively.
     - Type: `int`
 
+#### Return values
+
+Returns `true` if the image could be processed, otherwise it returns `false`.
+
+
 ## Auto scaling
 
 If `$auto` is set to `true`, images will be automatically scaled via GET-parameters in the URL:
@@ -75,13 +83,14 @@ www.url.to/your/image.jpg?w=500
 
 will produce an image with a width of 500 pixels.
 
-### Abbreviations
-- `w` for `$width`
-- `h` for `$height`
-- `s` for `$size`
-- `t` for `$top`
-- `r` for `$right`
-- `b` for `$bottom`
-- `l` for `$left`
-- `f` for `$format`
-- `q` for `$quality`
+|Parameter|Abbreviation in GET|
+| --- | --- |
+|`$width` | `w` |
+| `$height` | `h` |
+| `$size` | `s` |
+| `$top` | `t` |
+| `$right` | `r` |
+| `$bottom` | `b` |
+| `$left` | `l` |
+| `$format` | `f` |
+| `$quality` | `q` |
