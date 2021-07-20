@@ -102,6 +102,7 @@ will produce an image with a width of 500 pixels.
 |`$width` | `w` |
 | `$height` | `h` |
 | `$size` | `s` |
+| `$crop` | `c` |
 | `$top` | `t` |
 | `$right` | `r` |
 | `$bottom` | `b` |
