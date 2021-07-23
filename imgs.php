@@ -1,9 +1,8 @@
 <?php
 
 namespace semmelsamu;
-function db($variable, $exit = false) {echo "\n\n<pre>"; var_dump($variable); echo "</pre>\n\n"; if($exit) exit;}
 
-class Imagescaled
+class Imgs
 {
     function __construct($path, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
     {
