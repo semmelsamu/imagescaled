@@ -4,7 +4,7 @@
 
 ## Setup
 
-Copy `imgs.php` a static location on your webserver and include the file. Use the namespace `semmelsamu`:
+Copy `src/imgs.php` a static location on your webserver and include the file. Use the namespace `semmelsamu`:
 ```php
 include("imgs.php");
 use \semmelsamu\Imgs;
