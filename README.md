@@ -4,16 +4,16 @@
 
 ## Setup
 
-Copy `imagescaled.php` a static location on your webserver and include the file. Use the namespace `semmelsamu`:
+Copy `imgs.php` a static location on your webserver and include the file. Use the namespace `semmelsamu`:
 ```php
-include("imagescaled.php");
-use \semmelsamu\Imagescaled;
+include("imgs.php");
+use \semmelsamu\Imgs;
 ```
 
-## Imagescaled
+## Imgs
 
 ```php
-new Imagescaled($path, [$auto, $cache, $cache_expires, $max_size]) : void
+new Imgs($path, [$auto, $cache, $cache_expires, $max_size]) : void
 ```
 
 Create a new Imagescaler.
@@ -44,7 +44,7 @@ Create a new Imagescaler.
 ### image
 
 ```php
-Imagescaled::image([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) : bool
+Imgs::image([$width, $height, $size, $top, $right, $bottom, $left, $format, $quality]) : bool
 ```
 
 Output an image. **Every parameter is optional.**
@@ -81,7 +81,7 @@ Returns `true` if the image could be processed, otherwise it returns `false`.
 ### empty_cache
 
 ```php
-Imagescaled::empty_cache() : void
+Imgs::empty_cache() : void
 ```
 
 Deletes every cached element older than `$cache_expires` seconds. By default the expiration time is set to 1 day.
