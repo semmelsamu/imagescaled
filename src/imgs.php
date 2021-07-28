@@ -26,18 +26,18 @@ class Imgs
             $quality = isset($_GET["q"]) ? $_GET["q"] : -1;
 
             $this->image(
-                width: $width, 
-                height: $height, 
-                crop: $crop, 
-                size: $size, 
+                $width, 
+                $height, 
+                $crop, 
+                $size, 
 
-                top: $top, 
-                right: $right, 
-                bottom: $bottom, 
-                left: $left, 
+                $top, 
+                $right, 
+                $bottom, 
+                $left, 
 
-                format: $format, 
-                quality: $quality
+                $format, 
+                $quality
             );
 
             $this->empty_cache();
