@@ -4,7 +4,7 @@ namespace semmelsamu;
 
 class Imgs
 {
-    function __construct($path, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
+    function __construct($path = null, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
     {
         // Import all parameters
         foreach(get_defined_vars() as $key => $val)
@@ -12,6 +12,11 @@ class Imgs
 
         if($auto)
         {   
+            if(!isset($path))
+            {
+                $this->path = $_SERVER["DOCUMENT_ROOT"] . urldecode(parse_url($_SERVER["REQUEST_URI"])["path"]);
+            }
+
             $width = isset($_GET["w"]) ? $_GET["w"] : null;
             $height = isset($_GET["h"]) ? $_GET["h"] : null;
             $crop = isset($_GET["c"]) ? $_GET["c"] : 1;
