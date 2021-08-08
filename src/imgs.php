@@ -4,45 +4,28 @@ namespace semmelsamu;
 
 class Imgs
 {
-    function __construct($path = null, $auto = true, $cache = "cache/", $cache_expires = 86400, $max_size = 2000) 
+    function __construct(
+        $auto = true, 
+        $cache = "cache/", 
+        $cache_expires = 86400, 
+        $max_size = 2000
+    )
     {
         // Import all parameters
         foreach(get_defined_vars() as $key => $val)
             $this->$key = $val;
 
         if($auto)
-        {   
-            if(!isset($path))
-            {
-                $this->path = $_SERVER["DOCUMENT_ROOT"] . urldecode(parse_url($_SERVER["REQUEST_URI"])["path"]);
-            }
-
-            $width = isset($_GET["w"]) ? $_GET["w"] : null;
-            $height = isset($_GET["h"]) ? $_GET["h"] : null;
-            $crop = isset($_GET["c"]) ? $_GET["c"] : 1;
-            $size = isset($_GET["s"]) ? $_GET["s"] : null;
-
-            $top = isset($_GET["t"]) ? $_GET["t"] : 0;
-            $right = isset($_GET["r"]) ? $_GET["r"] : 0;
-            $bottom = isset($_GET["b"]) ? $_GET["b"] : 0;
-            $left = isset($_GET["l"]) ? $_GET["l"] : 0;
-
-            $format = isset($_GET["f"]) ? $_GET["f"] : null;
-            $quality = isset($_GET["q"]) ? $_GET["q"] : -1;
-
+        {
             $this->image(
-                $width, 
-                $height, 
-                $crop, 
-                $size, 
-
-                $top, 
-                $right, 
-                $bottom, 
-                $left, 
-
-                $format, 
-                $quality
+                top: isset($_GET["t"]) ? $_GET["t"] : null,
+                right: isset($_GET["r"]) ? $_GET["r"] : null,
+                bottom: isset($_GET["b"]) ? $_GET["b"] : null,
+                left: isset($_GET["l"]) ? $_GET["l"] : null,
+                width: isset($_GET["w"]) ? $_GET["w"] : null,
+                height: isset($_GET["h"]) ? $_GET["h"] : null,
+                format: isset($_GET["f"]) ? $_GET["f"] : null,
+                quality: isset($_GET["q"]) ? $_GET["q"] : -1,
             );
 
             $this->empty_cache();
@@ -71,15 +54,15 @@ class Imgs
 
 
     function image(
-        $width = null, 
-        $height = null, 
-        $crop = true, 
-        $size = null, 
+        $path = true,
 
-        $top = 0, 
-        $right = 0, 
-        $bottom = 0, 
-        $left = 0, 
+        $top = 0,
+        $right = 0,
+        $bottom = 0,
+        $left = 0,
+
+        $width = null, 
+        $height = null,
 
         $format = null, 
         $quality = -1
@@ -118,18 +101,23 @@ class Imgs
     {
         // File exists
 
+        if($this->path == true)
+            $this->path = $_SERVER["DOCUMENT_ROOT"].parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
+
         if(!file_exists($this->path))
             throw new \Exception("Image '$this->path' does not exist."); 
-        
 
         // Image formats
 
-        $valid_formats = ["jpg", "jpeg", "png"];
+        $valid_formats = ["jpeg", "png", "webp"];
 
         $this->src_format = substr($this->path, strrpos($this->path, ".")+1);
         
-        if($this->src_format == "jpeg")
-            $this->src_format = "jpg";
+        if($this->src_format == "jpg")
+            $this->src_format = "jpeg";
+
+        if($this->format == "jpg")
+            $this->format = "jpeg";
         
         if(!isset($this->format))
             $this->format = $this->src_format;
@@ -139,100 +127,79 @@ class Imgs
     }
 
 
+    /**
+     * Scaling logic
+     */
     private function calc_dimensions()
     {
-        list($this->src_width, $this->src_height) = getimagesize($this->path);
+        list($src_w, $src_h) = getimagesize($this->path);
 
+        $crop_w = $src_w - $this->left - $this->right;
+        $crop_h = $src_h - $this->top - $this->bottom;
 
-        // Process size parameter
-
-        if(isset($this->size))
-        {
-            if($this->src_width < $this->src_height)
-            {
-                $this->width = $this->size;
-                $this->height = null;
-            }
-            else
-            {
-                $this->width = null;
-                $this->height = $this->size;
-            }
-        }
-
-
-        // Set width and height
+        $src_ratio = $src_h / $src_w;
 
         if(!isset($this->width) && !isset($this->height))
         {
-            $this->width = $this->src_width;
-            $this->height = $this->src_height;
-        }
-        else if(isset($this->width) && !isset($this->height))
-        {
-            $this->height = $this->src_height * ($this->width / $this->src_width);
+            $this->width = $crop_w;
+            $this->height = $crop_h;
         }
         else if(isset($this->height) && !isset($this->width))
         {
-            $this->width = $this->src_width * ($this->height / $this->src_height);
+            $this->width = $crop_w * $this->height / $crop_h;
+        }
+        else if(isset($this->width) && !isset($this->height))
+        {
+            $this->height = $crop_h * $this->width / $crop_w;
         }
 
-
-        // Process cropping
-        
-        $this->scale_h = $this->width / $this->src_width;
-        $this->scale_v = $this->height / $this->src_height;
-
-        if($this->crop)
+        if(isset($this->max_size))
         {
-            if($this->scale_h < $this->scale_v)
-            {
-                $crop_h = abs(($this->src_width * $this->scale_v - $this->width) / $this->scale_v) / 2;
-                $this->top += $crop_h;
-                $this->bottom += $crop_h;
-            }
-            else if($this->scale_h > $this->scale_v)
-            {
-                $crop_v = abs(($this->src_height * $this->scale_h - $this->height) / $this->scale_h) / 2;
-                $this->top += $crop_v;
-                $this->bottom += $crop_v;
-            }
-        }
-
-
-        // Set scale variables
-
-        $this->canvas_width = $this->width;
-        $this->canvas_height = $this->height;
-
-        $this->dst_x = 0;
-        $this->dst_y = 0;
-        $this->src_x = $this->left;
-        $this->src_y = $this->top;
-        $this->dst_width = $this->canvas_width;
-        $this->dst_height = $this->canvas_height;
-        $this->src_width -= $this->left + $this->right;
-        $this->src_height -= $this->top + $this->bottom;
-
-
-        // Max Size
-
-        if($this->max_size)
-        {
-            if($this->canvas_width > $this->max_size)
-            {
+            if($this->width > $this->max_size)
                 $this->width = $this->max_size;
-                $this->height = null;
-                $this->size = null;
-                $this->calc_dimensions();
-            }
-            else if($this->canvas_height > $this->max_size)
-            {
+
+            if($this->height > $this->max_size)
                 $this->height = $this->max_size;
-                $this->width = null;
-                $this->size = null;
-                $this->calc_dimensions();
-            }
+        }
+
+        $this->dst_w = $this->width;
+        $this->dst_h = $this->height;
+
+        $dst_ratio = $this->dst_h / $this->dst_w;
+
+        $cut_w = $crop_w;
+        $cut_h = $crop_w * $dst_ratio;
+
+        if($cut_h > $crop_h)
+        {
+            $cut_h = $crop_h;
+            $cut_w = $crop_h / $dst_ratio;
+        }
+
+        $this->cut_x = $this->left + ($crop_w - $cut_w) / 2;
+        $this->cut_y = $this->top + ($crop_h - $cut_h) / 2;
+        
+        $this->cut_w = $cut_w;
+        $this->cut_h = $cut_h;
+
+        if(0)
+        {
+            ?>
+            <h1>Debug</h1>
+            <ul>
+                <li>width: <?= $this->width ?></li>
+                <li>height: <?= $this->height ?></li>
+                <li>dst_ratio: <?= $dst_ratio ?></li>
+                <li>crop_w: <?= $crop_w ?></li>
+                <li>crop_h: <?= $crop_h ?></li>
+                <br>
+                <li>cut_x: <?= $this->cut_x ?></li>
+                <li>cut_y: <?= $this->cut_y ?></li>
+                <li>cut_w: <?= $cut_w ?></li>
+                <li>cut_h: <?= $cut_h ?></li>
+            </ul>
+            <?php
+            die;
         }
     }
 
@@ -241,14 +208,12 @@ class Imgs
     {
         $this->cache_key = md5(
             $this->path."?".
-            $this->dst_x.".".
-            $this->dst_y.".". 
-            $this->src_x.".". 
-            $this->src_y.".". 
-            $this->dst_width.".". 
-            $this->dst_height.".". 
-            $this->src_width.".". 
-            $this->src_height.".".
+            $this->cut_x.".". 
+            $this->cut_y.".". 
+            $this->dst_w.".".
+            $this->dst_h.".".
+            $this->cut_w.".".
+            $this->cut_h.".".
             $this->format.".".$this->quality
         );
     }
@@ -264,8 +229,9 @@ class Imgs
     {
         switch($this->src_format)
         {
-            case "jpg": $this->src_image = imagecreatefromjpeg($this->path); break;
+            case "jpeg": $this->src_image = imagecreatefromjpeg($this->path); break;
             case "png": $this->src_image = imagecreatefrompng($this->path); break;
+            case "webp": $this->src_image = imagecreatefromwebp($this->path); break;
         }
     }
 
@@ -273,24 +239,24 @@ class Imgs
     private function render_image()
     {
         $this->image = imagecreatetruecolor(
-            $this->canvas_width, 
-            $this->canvas_height
+            $this->dst_w,
+            $this->dst_h
         );
 
         imagealphablending($this->image, false);
         imagesavealpha($this->image, true);
 
         imagecopyresampled(
-            $this->image, 
-            $this->src_image, 
-            $this->dst_x, 
-            $this->dst_y, 
-            $this->src_x, 
-            $this->src_y, 
-            $this->dst_width, 
-            $this->dst_height, 
-            $this->src_width, 
-            $this->src_height
+            $this->image,
+            $this->src_image,
+            0,
+            0,
+            $this->cut_x,
+            $this->cut_y,
+            $this->dst_w,
+            $this->dst_h,
+            $this->cut_w,
+            $this->cut_h
         );
     }
 
@@ -304,10 +270,12 @@ class Imgs
         // Save the image
         switch($this->format)
         {
-            case "jpg": imagejpeg($this->image, $this->cache.$this->cache_key, $this->quality); break;
+            case "jpeg": imagejpeg($this->image, $this->cache.$this->cache_key, $this->quality); break;
             case "png": imagepng($this->image, $this->cache.$this->cache_key, $this->quality); break;
+            case "webp": imagewebp($this->image, $this->cache.$this->cache_key, $this->quality); break;
         }
     }
+
 
     private function output_cached_image()
     {
@@ -315,12 +283,14 @@ class Imgs
         readfile($this->cache.$this->cache_key);
     }
 
+
     private function output_rendered_image()
     {
         switch($this->format)
         {
-            case "jpg": header("Content-Type: image/jpeg"); imagejpeg($this->image, null, $this->quality); break;
+            case "jpeg": header("Content-Type: image/jpeg"); imagejpeg($this->image, null, $this->quality); break;
             case "png": header("Content-Type: image/png"); imagepng($this->image, null, $this->quality); break;
+            case "webp": header("Content-Type: image/webp"); imagewebp($this->image, null, $this->quality); break;
         }
     }
 }
