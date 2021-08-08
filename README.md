@@ -66,10 +66,6 @@ Output an image. **Every parameter is optional.**
     - Type: `int`
     - Default: `-1`
 
-#### Return values
-
-Returns `true` if the image could be processed, otherwise it returns `false`.
-
 
 ### empty_cache
 
