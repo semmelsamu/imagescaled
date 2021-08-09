@@ -41,7 +41,7 @@ Create a new Imagescaler.
 ### image
 
 ```php
-Imgs::image($path, $top, $right, $bottom, $left, $width, $height, $format, $quality) : bool
+Imgs::image($path, $top, $right, $bottom, $left, $size, $width, $height, $format, $quality) : bool
 ```
 
 Output an image. **Every parameter is optional.**
@@ -55,6 +55,9 @@ Output an image. **Every parameter is optional.**
     - The amount of pixels cropped into the image from the top, right, bottom and left before the image is scaled.
     - Type: `int`
     - Default: `0`
+- `$size`
+    - The size of the smallest side of the image. If specified, `$width` and `$height` will be ignored.
+    - Type: `int`
 - `$width` and `$height`
     - The width and height of the scaled image. If source and destination aspect ratios don't match, the image will be cropped. If only one is given, the other will be automatically calculated.
     - Type: `int`
