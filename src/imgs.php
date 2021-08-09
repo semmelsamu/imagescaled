@@ -22,6 +22,7 @@ class Imgs
                 right: isset($_GET["r"]) ? $_GET["r"] : null,
                 bottom: isset($_GET["b"]) ? $_GET["b"] : null,
                 left: isset($_GET["l"]) ? $_GET["l"] : null,
+                size: isset($_GET["s"]) ? $_GET["s"] : null,
                 width: isset($_GET["w"]) ? $_GET["w"] : null,
                 height: isset($_GET["h"]) ? $_GET["h"] : null,
                 format: isset($_GET["f"]) ? $_GET["f"] : null,
@@ -60,6 +61,8 @@ class Imgs
         $right = 0,
         $bottom = 0,
         $left = 0,
+
+        $size = null, 
 
         $width = null, 
         $height = null,
@@ -137,6 +140,20 @@ class Imgs
         $crop_w = $src_w - $this->left - $this->right;
         $crop_h = $src_h - $this->top - $this->bottom;
 
+        if(isset($this->size))
+        {
+            if($crop_w > $crop_h)
+            {
+                $this->width = null;
+                $this->height = $this->size;
+            }
+            else
+            {
+                $this->width = $this->size;
+                $this->height = null;
+            }
+        }
+
         $src_ratio = $src_h / $src_w;
 
         if(!isset($this->width) && !isset($this->height))
@@ -155,11 +172,19 @@ class Imgs
 
         if(isset($this->max_size))
         {
+            $ratio = $this->height / $this->width;
+
             if($this->width > $this->max_size)
+            {
                 $this->width = $this->max_size;
+                $this->height = $this->width * $ratio;
+            }
 
             if($this->height > $this->max_size)
+            {
                 $this->height = $this->max_size;
+                $this->width = $this->height / $ratio;
+            }
         }
 
         $this->dst_w = $this->width;
