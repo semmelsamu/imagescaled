@@ -264,8 +264,8 @@ class Imgs
     private function render_image()
     {
         $this->image = imagecreatetruecolor(
-            $this->dst_w,
-            $this->dst_h
+            intval($this->dst_w),
+            intval($this->dst_h)
         );
 
         imagealphablending($this->image, false);
@@ -276,12 +276,12 @@ class Imgs
             $this->src_image,
             0,
             0,
-            $this->cut_x,
-            $this->cut_y,
-            $this->dst_w,
-            $this->dst_h,
-            $this->cut_w,
-            $this->cut_h
+            intval($this->cut_x),
+            intval($this->cut_y),
+            intval($this->dst_w),
+            intval($this->dst_h),
+            intval($this->cut_w),
+            intval($this->cut_h)
         );
     }
 
