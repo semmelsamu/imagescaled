@@ -29,8 +29,6 @@ class Imgs
                 quality: isset($_GET["q"]) ? $_GET["q"] : -1,
             );
 
-            $this->empty_cache();
-
             exit;
         }
     }
