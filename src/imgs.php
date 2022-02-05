@@ -1,40 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace semmelsamu;
 
 class Imgs
 {
-    function __construct(
-        $auto = true, 
-        $cache = "cache/", 
-        $cache_expires = 86400, 
-        $max_size = 2000
+    public function __construct(
+        private bool $auto = true, 
+        private bool|string $cache = "cache/", 
+        private int $cache_expires = 86400, 
+        private bool|int $max_size = 2000,
+        private bool|string $default_format = false
     )
     {
-        // Import all parameters
-        foreach(get_defined_vars() as $key => $val)
-            $this->$key = $val;
-
         if($auto)
         {
-            $this->image(
-                top: isset($_GET["t"]) ? $_GET["t"] : null,
-                right: isset($_GET["r"]) ? $_GET["r"] : null,
-                bottom: isset($_GET["b"]) ? $_GET["b"] : null,
-                left: isset($_GET["l"]) ? $_GET["l"] : null,
-                size: isset($_GET["s"]) ? $_GET["s"] : null,
-                width: isset($_GET["w"]) ? $_GET["w"] : null,
-                height: isset($_GET["h"]) ? $_GET["h"] : null,
-                format: isset($_GET["f"]) ? $_GET["f"] : null,
-                quality: isset($_GET["q"]) ? $_GET["q"] : -1,
-            );
-
+            $this->image(from_url: true);
             exit;
         }
     }
 
-
-    function empty_cache()
+    public function empty_cache(): void
     {
         if(!$this->cache) 
             return;
@@ -52,26 +39,42 @@ class Imgs
     }
 
 
-    function image(
-        $path = true,
+    public function image(
+        string|bool $path = true,
 
-        $top = 0,
-        $right = 0,
-        $bottom = 0,
-        $left = 0,
+        int $top = 0,
+        int $right = 0,
+        int $bottom = 0,
+        int $left = 0,
 
-        $size = null, 
+        int $min_size = null, 
 
-        $width = null, 
-        $height = null,
+        int $width = null, 
+        int $height = null,
 
-        $format = null, 
-        $quality = -1
-    ) 
+        string $format = null, 
+
+        int $quality = -1,
+
+        bool $from_url = false
+    ): void
     {
         // Import all parameters
         foreach(get_defined_vars() as $key => $val)
             $this->$key = $val;
+
+        if($this->from_url)
+        {
+            if(isset($_GET["t"])) $this->top = (int) $_GET["t"];
+            if(isset($_GET["r"])) $this->right = (int) $_GET["r"];
+            if(isset($_GET["b"])) $this->bottom = (int) $_GET["b"];
+            if(isset($_GET["l"])) $this->left = (int) $_GET["l"];
+            if(isset($_GET["m"])) $this->min_size = (int) $_GET["m"];
+            if(isset($_GET["w"])) $this->width = (int) $_GET["w"];
+            if(isset($_GET["h"])) $this->height = (int) $_GET["h"];
+            if(isset($_GET["f"])) $this->format = (string) $_GET["f"];
+            if(isset($_GET["f"])) $this->quality = (int) $_GET["q"];
+        }
 
         $this->process_inputs();
         $this->calc_dimensions();
@@ -112,10 +115,15 @@ class Imgs
 
         $valid_formats = ["jpeg", "png", "webp"];
 
+        
+
         $this->src_format = substr($this->path, strrpos($this->path, ".")+1);
         
         if($this->src_format == "jpg")
             $this->src_format = "jpeg";
+
+        if($this->default_format)
+            $this->format = $this->default_format;
 
         if($this->format == "jpg")
             $this->format = "jpeg";
@@ -125,6 +133,9 @@ class Imgs
 
         if(!in_array($this->src_format, $valid_formats) || !in_array($this->format, $valid_formats))
             throw new \Exception("Image format $this->src_format>>$this->format is not supported.");
+
+        if(!isset($this->quality))
+            $this->quality = -1;
     }
 
 
@@ -138,16 +149,16 @@ class Imgs
         $crop_w = $src_w - $this->left - $this->right;
         $crop_h = $src_h - $this->top - $this->bottom;
 
-        if(isset($this->size))
+        if(isset($this->min_size))
         {
             if($crop_w > $crop_h)
             {
                 $this->width = null;
-                $this->height = $this->size;
+                $this->height = $this->min_size;
             }
             else
             {
-                $this->width = $this->size;
+                $this->width = $this->min_size;
                 $this->height = null;
             }
         }

@@ -55,7 +55,7 @@ Output an image. **Every parameter is optional.**
     - The amount of pixels cropped into the image from the top, right, bottom and left before the image is scaled.
     - Type: `int`
     - Default: `0`
-- `$size`
+- `$min_size`
     - The size of the smallest side of the image. If specified, `$width` and `$height` will be ignored.
     - Type: `int`
 - `$width` and `$height`
