@@ -122,7 +122,7 @@ class Imgs
         if($this->src_format == "jpg")
             $this->src_format = "jpeg";
 
-        if($this->default_format)
+        if($this->default_format && !isset($this->format))
             $this->format = $this->default_format;
 
         if($this->format == "jpg")
