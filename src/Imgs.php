@@ -73,7 +73,7 @@ class Imgs
             if(isset($_GET["w"])) $this->width = (int) $_GET["w"];
             if(isset($_GET["h"])) $this->height = (int) $_GET["h"];
             if(isset($_GET["f"])) $this->format = (string) $_GET["f"];
-            if(isset($_GET["f"])) $this->quality = (int) $_GET["q"];
+            if(isset($_GET["q"])) $this->quality = (int) $_GET["q"];
         }
 
         $this->process_inputs();
@@ -85,7 +85,7 @@ class Imgs
             $this->import_image();
             $this->render_image();
         }
-        
+
         if($this->cache)
         {
             if(!$this->image_cached())
@@ -115,10 +115,10 @@ class Imgs
 
         $valid_formats = ["jpeg", "png", "webp"];
 
-        
+
 
         $this->src_format = substr($this->path, strrpos($this->path, ".")+1);
-        
+
         if($this->src_format == "jpg")
             $this->src_format = "jpeg";
 
@@ -127,7 +127,7 @@ class Imgs
 
         if($this->format == "jpg")
             $this->format = "jpeg";
-        
+
         if(!isset($this->format))
             $this->format = $this->src_format;
 
@@ -212,7 +212,7 @@ class Imgs
 
         $this->cut_x = $this->left + ($crop_w - $cut_w) / 2;
         $this->cut_y = $this->top + ($crop_h - $cut_h) / 2;
-        
+
         $this->cut_w = $cut_w;
         $this->cut_h = $cut_h;
 
