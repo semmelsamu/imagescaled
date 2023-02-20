@@ -8,8 +8,8 @@ class Imgs
 {
     public function __construct(
         private bool $auto = true, 
-        private bool|string $cache = "cache/", 
-        private int $cache_expires = 86400, 
+        private bool|string $cache = "cache/",
+        private int $cache_max_files = 100,
         private bool|int $max_size = 2000,
         private bool|string $default_format = false
     )
@@ -17,6 +17,7 @@ class Imgs
         if($auto)
         {
             $this->image(from_url: true);
+            $this->empty_cache();
             exit;
         }
     }
@@ -26,14 +27,19 @@ class Imgs
         if(!$this->cache) 
             return;
 
+        $cache = array();
+        
         foreach(scandir($this->cache) as $file)
         {
-            if(strpos($file, ".") == false)
+            if(!is_dir($this->cache.$file))
+                array_push($cache, $file);
+        }
+        
+        if(sizeof($cache) > $this->cache_max_files)
+        {
+            foreach($cache as $file)
             {
-                if((filectime($this->cache.$file)+$this->cache_expires) < time())
-                {
-                    unlink($this->cache.$file);
-                }
+                unlink($this->cache.$file);
             }
         }
     }
