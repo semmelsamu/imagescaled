@@ -246,16 +246,16 @@ class Imgs
 
     private function generate_cache_key()
     {
-        $this->cache_key = md5(
-            $this->path."?".
+        $this->cache_key = 
+            urlencode($this->path)."-".
             $this->cut_x.".". 
             $this->cut_y.".". 
             $this->dst_w.".".
             $this->dst_h.".".
             $this->cut_w.".".
             $this->cut_h.".".
-            $this->format.".".$this->quality
-        );
+            $this->quality.".".$this->format
+        ;
     }
 
 
