@@ -13,8 +13,8 @@ class Image
     
     # ~
     
-    protected $original_image, $original_content_type;
-    protected $original_width, $original_height;
+    protected $image, $content_type;
+    protected $width, $height;
     
     # ~
     
@@ -27,9 +27,9 @@ class Image
         if(!file_exists($path))
             throw new \Exception("File $path could not be found.");
         
-        $this->original_image = imagecreatefromstring(file_get_contents($path));
+        $this->image = imagecreatefromstring(file_get_contents($path));
         
-        $this->original_content_type = pathinfo($path, PATHINFO_EXTENSION);
+        $this->content_type = pathinfo($path, PATHINFO_EXTENSION);
     }
     
     # ~
@@ -38,7 +38,47 @@ class Image
     
     # ~
     
-    public function crop(
+    public function resize(
+        int $width = null,
+        int $height = null,
+    )
+    {
+        if(!isset($width) && !isset($height))
+            throw new \Exception("At least one dimension is required");
+        
+        
+        // Auto-calculate correct aspect ratio if only one dimension is given
+        
+        if(!isset($width))
+            $width = $this->get_width() * ($height / $this->get_height());
+            
+        else if(!isset($height))
+            $height = $this->get_height() * ($width / $this->get_width());
+        
+        
+        // Round
+        
+        $width = intval(round($width));
+        $height = intval(round($height));
+        
+        
+        // Resize the image
+        
+        $resized = imagecreatetruecolor($width, $height);
+        imagecopyresampled($resized, $this->image, 0, 0, 0, 0, $width, $height, imagesx($this->image), imagesy($this->image));
+        $this->image = $resized;
+        
+    }
+    
+    /*public function scale(float $percentage)
+    {
+        if($percentage <= 0)
+            throw new \Exception("Percentage has to be greater than 0");
+        
+        $this->scale_percentage = $percentage;
+    }*/
+    
+    /*public function crop(
         int $top = 0,
         int $right = 0,
         int $bottom = 0,
@@ -51,9 +91,9 @@ class Image
         $this->crop_left = $left;
         
         return $this;
-    }
+    }*/
     
-    public function resize(
+    /*public function resize(
         int $width = null,
         int $height = null,
     )
@@ -80,7 +120,7 @@ class Image
         }
         
         return $this;
-    }
+    }*/
     
     # ~
     
@@ -88,7 +128,7 @@ class Image
     
     # ~
     
-    public function render()
+    /*public function render()
     {
         // Contains dst_x, dst_y, src_x, src_y, ...
         $rectangles = $this->calculate_rectangles();
@@ -99,7 +139,7 @@ class Image
             $dst_height
         );
         
-        $src_image = $this->original_image;
+        $src_image = $this->image;
         
         imagecopyresampled(
             $dst_image,
@@ -115,17 +155,19 @@ class Image
         );
         
         return $dst_image;
-    }
+    }*/
     
-    protected function calculate_rectangles()
+    /*protected function calculate_rectangles()
     {
         // Import original dimensions
         
-        $original_width = $this->get_original_width();
-        $original_height = $this->get_original_height();
+        $original_width = $this->get_width();
+        $original_height = $this->get_height();
         
         
         // Import member variables
+        
+        $scale_percentage = $this->scale_percentage ?? 1;
         
         $crop_top = $this->crop_top ?? 0;
         $crop_right = $this->crop_right ?? 0;
@@ -136,53 +178,22 @@ class Image
         $resize_height = $this->resize_height ?? $original_height;
         
         
-        // Add cropping if aspect ratio changes
-        
-        $original_aspect_ratio = $original_width / $original_height;
-        $resized_aspect_ratio = $resize_width / $resize_height;
-        
-        if($original_aspect_ratio < $resized_aspect_ratio)
-        {
-            $scale = $original_width / $resize_width;
-            
-            $crop_height_add = $original_height - ($resize_height * $scale);
-            
-            $crop_top += $crop_height_add / 2;
-            $crop_bottom += $crop_height_add / 2;
-        }
-        else if($original_aspect_ratio > $resized_aspect_ratio)
-        {
-            $scale = $original_height / $resize_height;
-            
-            $crop_width_add = $original_width - ($resize_width * $scale);
-            
-            $crop_left += $crop_width_add / 2;
-            $crop_right += $crop_width_add / 2;
-        }
-        
-        
         // Source rectangle
         
-        $crop_width = $crop_left + $crop_right;
-        $crop_height = $crop_top + $crop_bottom;
+        $src_x = 0;
+        $src_y = 0;
         
-        $src_x = $crop_left;
-        $src_y = $crop_top;
-        
-        $src_width = $original_width - $crop_width;
-        $src_height = $original_height - $crop_height;
+        $src_width = $original_width;
+        $src_height = $original_height;
         
         
         // Destination rectangle
         
-        $crop_width_percentage = $src_width / $original_width;
-        $crop_height_percentage = $src_height / $original_height;
-        
         $dst_x = 0;
         $dst_y = 0;
         
-        $dst_width = $resize_width;
-        $dst_height = $resize_height;
+        $dst_width = $original_width * $scale_percentage;
+        $dst_height = $original_height * $scale_percentage;
         
         
         // Collect variables
@@ -201,7 +212,7 @@ class Image
         
         
         return $rectangles;
-    }
+    }*/
     
     # ~
     
@@ -209,29 +220,34 @@ class Image
     
     # ~
     
-    public function get_original_dimensions()
+    public function get_image()
     {
-        if(!isset($this->original_width) || !isset($this->original_height))
-            list($this->original_width, $this->original_height) = getimagesize($this->path);
+        return $this->image;
+    }
+    
+    public function get_dimensions()
+    {
+        if(!isset($this->width) || !isset($this->height))
+            list($this->width, $this->height) = getimagesize($this->path);
             
         return array(
-            "width" => $this->original_width,
-            "height" => $this->original_height
+            "width" => $this->width,
+            "height" => $this->height
         );
     }
     
-    public function get_original_width()
+    public function get_width()
     {
-        return $this->get_original_dimensions()["width"];
+        return $this->get_dimensions()["width"];
     }
     
-    public function get_original_height()
+    public function get_height()
     {
-        return $this->get_original_dimensions()["height"];
+        return $this->get_dimensions()["height"];
     }
     
-    public function get_original_content_type()
+    public function get_content_type()
     {
-        return $this->source_content_type;
+        return $this->content_type;
     }
 }
