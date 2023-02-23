@@ -24,12 +24,12 @@ class Imgs
     
     # ~
     
-    public function url($filename)
+    public function url($root)
     {
         $this->cache->invalidate_cache();
         
         $this->image(
-            $filename,
+            $root . urldecode(parse_url($_SERVER["REQUEST_URI"])["path"]),
             isset($_GET["t"]) ? intval($_GET["t"]) : 0,
             isset($_GET["r"]) ? intval($_GET["r"]) : 0,
             isset($_GET["b"]) ? intval($_GET["b"]) : 0,
