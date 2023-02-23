@@ -33,17 +33,17 @@ class Cache
     
     public function is_cached($filename)
     {
-        return file_exists($this->path . $filename);
+        return file_exists($this->path . $this->cache_name($filename));
     }
     
     public function save($filename, $data)
     {
-        file_put_contents($this->path . $filename, $data);
+        file_put_contents($this->path . $this->cache_name($filename), $data);
     }
     
     public function load($filename)
     {
-        return file_get_contents($this->path . $filename);
+        return file_get_contents($this->path . $this->cache_name($filename));
     }
     
     public function invalidate_cache()
@@ -70,5 +70,16 @@ class Cache
         {
             unlink($this->path . array_values($files)[$i]);
         }
+    }
+    
+    # ~
+    
+    # Util
+    
+    # ~
+    
+    protected function cache_name($filename)
+    {
+        return urlencode($filename);
     }
 }
