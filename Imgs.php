@@ -64,6 +64,7 @@ class Imgs
         
         $key = "$filename-$top-$right-$bottom-$left-$width-$height-$quality.$format";
         
+        // TODO: Proper MIME type header and improve performance of cached loading 
         header("Content-type: $format");
         
         if($this->cache->is_cached($key))
