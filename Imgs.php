@@ -7,8 +7,24 @@ namespace semmelsamu;
 
 class Imgs
 {
+    /**
+     * SUPPORTED_FORMATS
+     * 
+     * Array of formats supported by the class. Applies for reading and outputting images.
+     * Notice: "jpeg" is not in the list, as it gets converted to "jpg".
+     */
     const SUPPORTED_FORMATS = ["jpg", "png"];
-    
+        
+    /**
+     * __construct
+     * 
+     * @param string $root The prefix for where images will be loaded.
+     * @param string $cache_dir The path to the directory where the rendered images will be stored.
+     * @param int $max_cache_files The number of maximal images in the cache. If more 
+     *                              images are added, old ones will be deleted.
+     *
+     * @return self
+     */
     public function __construct(
         protected string $root = "./",
         protected string $cache_dir = "cache/",
@@ -18,12 +34,16 @@ class Imgs
         if(!is_dir($cache_dir))
             mkdir($cache_dir);
     }
-    
-    public function prepare_from_url($url)
-    {
-        // todo
-    }
-    
+        
+    /**
+     * prepare_from_string
+     * 
+     * Prepares the image with parameters given via a string.
+     * @see prepare()
+     *
+     * @param  mixed $string
+     * @return self
+     */
     public function prepare_from_string(string $string)
     {
         $parsed_url = parse_url($string);
@@ -40,8 +60,27 @@ class Imgs
             quality: isset($parsed_string["q"]) ? intval($parsed_string["q"]) : null,
             format: $parsed_string["f"] ?? null
         );
+        
+        return $this;
     }
-    
+        
+    /**
+     * prepare
+     * 
+     * Captures and validates every parameter for the image.
+     * 
+     * @param string $filename The Filename of the image. Will be prefixed with $root (@see __construct)
+     * @param ?int $width The output width of the image. If not set, it will be calculated automatically.
+     * @param ?int $height The output height of the image. If not set, it will be calculated automatically.
+     *     If neither $width or $height are set, the image will have the original width and height.
+     *     If both $width and $height are set and do not match the original aspect ratio, the image will be cropped.
+     * @param ?int $quality The quality of the output image. 
+     *     E.g. for jpeg quality, @see https://www.php.net/manual/de/function.imagejpeg.php#refsect1-function.imagejpeg-parameters 
+     * @param ?string $format The output format. If not set, the format will be the same as the original source.
+     *     @see SUPPORTED_FORMATS
+     * 
+     * @return self
+     */
     public function prepare(
         string $filename,
         ?int $width = null,
@@ -50,6 +89,8 @@ class Imgs
         ?string $format = null
     )
     {
+        // Capture Parameters    
+    
         $this->image = $this->root . $filename;
         
         list($this->original_width, $this->original_height) = getimagesize($this->image);
@@ -58,11 +99,43 @@ class Imgs
         $this->height = $height;
         
         $this->quality = $quality ?? -1;
-        $this->format = $format;
+        
+        
+        // Validate Format 
+        
+        $this->original_format = pathinfo($this->image, PATHINFO_EXTENSION);
+        $this->output_format = $format;
+        
+        if(!isset($this->output_format))
+            $this->output_format = $this->original_format;
+            
+        if($this->original_format == "jpeg") $this->original_format = "jpg";
+        if($this->output_format == "jpeg") $this->output_format = "jpg";
+            
+        if(!in_array($this->original_format, self::SUPPORTED_FORMATS))
+            throw new \Exception("Source image format $this->original_format is not supported.");
+            
+        if(!in_array($this->output_format, self::SUPPORTED_FORMATS))
+            throw new \Exception("Output image format $this->output_format is not supported.");
+        
+        // Rectangles
         
         $this->calculate_rectangles();
+        
+        
+        // Return
+        
+        return $this;
     }
-    
+        
+    /**
+     * calculate_rectangles
+     * 
+     * Calculates the coordinates and dimensions of the source and destination rectangles,
+     * used later to resize the image. @see output()
+     *
+     * @return void
+     */
     public function calculate_rectangles()
     {
         $original_width = $this->original_width;
@@ -107,27 +180,17 @@ class Imgs
     {
         return $this->dst_height;
     }
-    
+        
+    /**
+     * output
+     * 
+     * If not cached, renders and saves the prepared image to cache.
+     * Then, outputs the corresponding header and image to the user. Finally, ends the script.
+     *
+     * @return void
+     */
     public function output()
     {
-        // Format Validation
-        
-        $original_format = pathinfo($this->image, PATHINFO_EXTENSION);
-        $output_format = $this->format;
-        
-        if(!isset($output_format))
-            $output_format = $original_format;
-            
-        if($original_format == "jpeg") $original_format = "jpg";
-        if($output_format == "jpeg") $output_format = "jpg";
-            
-        if(!in_array($original_format, self::SUPPORTED_FORMATS))
-            throw new \Exception("Source image format $original_format is not supported.");
-            
-        if(!in_array($output_format, self::SUPPORTED_FORMATS))
-            throw new \Exception("Output image format $output_format is not supported.");
-        
-        
         // Cache
         
         $key = $this->image .
@@ -140,13 +203,16 @@ class Imgs
             "-" . $this->src_width .
             "-" . $this->src_height .
             "-" . $this->quality .
-            "." . $output_format;
+            "." . $this->output_format;
         
         $cached_image = $this->cache_dir . urlencode($key);
         
         if(!file_exists($cached_image))
         {
-            switch($original_format)
+            
+            // Load Original Image
+            
+            switch($this->original_format)
             {
                 case "png":
                     $original_image = imagecreatefrompng($this->image);
@@ -157,6 +223,9 @@ class Imgs
                     $original_image = imagecreatefromjpeg($this->image);
                     break;
             }
+            
+            
+            // Render Image
             
             $output_image = imagecreatetruecolor($this->dst_width, $this->dst_height);
             
@@ -173,7 +242,10 @@ class Imgs
                 $this->src_height
             );
             
-            switch($output_format)
+            
+            // Save rendered image to cache
+            
+            switch($this->output_format)
             {
                 case "png":
                     imagepng($output_image, $cached_image, $this->quality);
@@ -187,7 +259,7 @@ class Imgs
         }
         
         
-        // Output
+        // Output cached image
         
         header("Content-type: " . mime_content_type($cached_image));
         header('Content-Length: ' . filesize($cached_image));
