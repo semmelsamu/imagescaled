@@ -7,6 +7,6 @@ include("../Imgs.php");
 
 $imgs = new Imgs();
 
-$imgs->prepare_from_string("mountains.jpg?f=png");
+$imgs->prepare_from_string("mountains.jpg?w=800");
 
 $imgs->output();
