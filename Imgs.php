@@ -36,16 +36,18 @@ class Imgs
     }
         
     /**
-     * prepare_from_string
+     * string
      * 
-     * Prepares the image with parameters given via a string.
+     * Parses parameters of a string and calls the prepare function.
      * @see prepare()
      *
      * @param  mixed $string
      * @return self
      */
-    public function prepare_from_string(string $string)
+    public function string(string $string)
     {
+        $this->string = $string;
+        
         $parsed_url = parse_url($string);
         
         parse_str($parsed_url["query"] ?? "", $parsed_string);
@@ -91,9 +93,10 @@ class Imgs
     {
         // Capture Parameters    
     
-        $this->image = $this->root . $filename;
+        $this->original_filename = $filename;
+        $this->original_root_filename = $this->root . $filename;
         
-        list($this->original_width, $this->original_height) = getimagesize($this->image);
+        list($this->original_width, $this->original_height) = getimagesize($this->original_root_filename);
         
         $this->width = $width;
         $this->height = $height;
@@ -103,7 +106,7 @@ class Imgs
         
         // Validate Format 
         
-        $this->original_format = pathinfo($this->image, PATHINFO_EXTENSION);
+        $this->original_format = pathinfo($this->original_root_filename, PATHINFO_EXTENSION);
         $this->output_format = $format;
         
         if(!isset($this->output_format))
@@ -136,7 +139,7 @@ class Imgs
      *
      * @return void
      */
-    public function calculate_rectangles()
+    protected function calculate_rectangles()
     {
         $original_width = $this->original_width;
         $original_height = $this->original_height;
@@ -193,7 +196,7 @@ class Imgs
     {
         // Cache
         
-        $key = $this->image .
+        $key = $this->original_root_filename .
             "-" . $this->dst_x .
             "-" . $this->dst_y .
             "-" . $this->src_x .
@@ -215,12 +218,12 @@ class Imgs
             switch($this->original_format)
             {
                 case "png":
-                    $original_image = imagecreatefrompng($this->image);
+                    $original_image = imagecreatefrompng($this->original_root_filename);
                     break;
                     
                 case "jpg":
                 default:
-                    $original_image = imagecreatefromjpeg($this->image);
+                    $original_image = imagecreatefromjpeg($this->original_root_filename);
                     break;
             }
             
@@ -261,10 +264,20 @@ class Imgs
         
         // Output cached image
         
-        header("Content-type: " . mime_content_type($cached_image));
+        header("Content-Type: " . mime_content_type($cached_image));
         header('Content-Length: ' . filesize($cached_image));
         readfile($cached_image);
         
         exit;
+    }
+    
+    public function html(?string $alt = null)
+    {
+        $src = 'src="' . ($this->string ?? $this->original_filename) . '"';
+        $width = 'width="' . $this->dst_width . '"';
+        $height = 'height="' . $this->dst_height . '"';
+        $alt = isset($alt) ? 'alt="' . $alt . '"' : '';
+        
+        return "<img $src $width $height $alt>";
     }
 }
