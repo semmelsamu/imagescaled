@@ -24,29 +24,59 @@ class Imgs
         // todo
     }
     
+    public function prepare_from_string(string $string)
+    {
+        $parsed_url = parse_url($string);
+        
+        parse_str($parsed_url["query"] ?? "", $parsed_string);
+        
+        if(empty($parsed_url["path"]))
+            throw new \Exception("At least filename must be given");
+        
+        $this->prepare(
+            filename: $parsed_url["path"],
+            quality: $parsed_string["q"] ?? null,
+            format: $parsed_string["f"] ?? null
+        );
+    }
+    
     public function prepare(
         string $filename,
-        int $quality = -1,
-        string $format = null
+        ?int $quality = null,
+        ?string $format = null
     )
     {
         $this->image = $this->root . $filename;
         
         list($this->original_width, $this->original_height) = getimagesize($this->image);
         
-        $this->quality = $quality;
+        $this->quality = $quality ?? -1;
         
         $this->format = $format;
+        
+        $this->calculate_rectangles();
+    }
+    
+    public function calculate_rectangles()
+    {
+        $this->dst_x = 0;
+        $this->dst_y = 0;
+        $this->src_x = 0;
+        $this->src_y = 0;
+        $this->dst_width = $this->original_width;
+        $this->dst_height = $this->original_height;
+        $this->src_width = $this->original_width;
+        $this->src_height = $this->original_height;
     }
     
     public function get_width()
     {
-        return $this->output_width;
+        return $this->dst_width;
     }
     
     public function get_height()
     {
-        return $this->output_height;
+        return $this->dst_height;
     }
     
     public function output()
@@ -71,7 +101,7 @@ class Imgs
         
         // Cache
         
-        $key = $this->image . "." . $this->quality . "." . $output_format;
+        $key = $this->image . "-" . $this->quality . "." . $output_format;
         
         $cached_image = $this->cache_dir . urlencode($key);
         
@@ -80,24 +110,39 @@ class Imgs
             switch($original_format)
             {
                 case "png":
-                    $image = imagecreatefrompng($this->image);
+                    $original_image = imagecreatefrompng($this->image);
                     break;
                     
                 case "jpg":
                 default:
-                    $image = imagecreatefromjpeg($this->image);
+                    $original_image = imagecreatefromjpeg($this->image);
                     break;
             }
+            
+            $output_image = imagecreatetruecolor($this->dst_width, $this->dst_height);
+            
+            imagecopyresampled(
+                $output_image,
+                $original_image,
+                $this->dst_x,
+                $this->dst_y,
+                $this->src_x,
+                $this->src_y,
+                $this->dst_width,
+                $this->dst_height,
+                $this->src_width,
+                $this->src_height
+            );
             
             switch($output_format)
             {
                 case "png":
-                    imagepng($image, $cached_image, $this->quality);
+                    imagepng($output_image, $cached_image, $this->quality);
                     break;
                     
                 case "jpg":
                 default:
-                    imagejpeg($image, $cached_image, $this->quality);
+                    imagejpeg($output_image, $cached_image, $this->quality);
                     break;
             }
         }
@@ -108,5 +153,7 @@ class Imgs
         header("Content-type: " . mime_content_type($cached_image));
         header('Content-Length: ' . filesize($cached_image));
         readfile($cached_image);
+        
+        exit;
     }
 }
