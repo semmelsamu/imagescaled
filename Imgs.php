@@ -4,123 +4,109 @@ declare(strict_types=1);
 
 namespace semmelsamu;
 
-include("Cache.php");
-include("Image.php");
-
 
 class Imgs
 {
+    const SUPPORTED_FORMATS = ["jpg", "png"];
+    
     public function __construct(
-        string $path = "cache/",
-        int $max_files = 100
+        protected string $root = "./",
+        protected string $cache_dir = "cache/",
+        protected int $max_cache_files = 100
     )
     {
-        $this->cache = new Imgs\Cache($path, $max_files);
+        if(!is_dir($cache_dir))
+            mkdir($cache_dir);
     }
     
-    # ~
-    
-    # Public functions
-    
-    # ~
-    
-    public function url($root)
+    public function prepare_from_url($url)
     {
-        $this->cache->invalidate_cache();
-        
-        $this->image(
-            $root . urldecode(parse_url($_SERVER["REQUEST_URI"])["path"]),
-            isset($_GET["t"]) ? intval($_GET["t"]) : 0,
-            isset($_GET["r"]) ? intval($_GET["r"]) : 0,
-            isset($_GET["b"]) ? intval($_GET["b"]) : 0,
-            isset($_GET["l"]) ? intval($_GET["l"]) : 0,
-            isset($_GET["w"]) ? intval($_GET["w"]) : null,
-            isset($_GET["h"]) ? intval($_GET["h"]) : null,
-            isset($_GET["q"]) ? intval($_GET["q"]) : -1,
-            isset($_GET["f"]) ? intval($_GET["f"]) : null
-        );
+        // todo
     }
     
-    public function image(
-        string $filename, 
-        int $top = 0, 
-        int $right = 0, 
-        int $bottom = 0, 
-        int $left = 0, 
-        int $width = null, 
-        int $height = null, 
-        int $quality = -1, 
+    public function prepare(
+        string $filename,
+        int $quality = -1,
         string $format = null
     )
     {
-        // Validate Inputs
+        $this->image = $this->root . $filename;
         
-        if(!file_exists($filename))
-            throw new \Exception("File $filename does not exist");
-            
-        if(!isset($format))
-            $format = pathinfo($filename, PATHINFO_EXTENSION);
+        list($this->original_width, $this->original_height) = getimagesize($this->image);
         
+        $this->quality = $quality;
         
-        $key = "$filename-$top-$right-$bottom-$left-$width-$height-$quality.$format";
-        
-        // TODO: Proper MIME type header and improve performance of cached loading 
-        header("Content-type: $format");
-        
-        if($this->cache->is_cached($key))
-        {
-            $image = $this->cache->load($key);
-        }
-        else
-        {
-            $image = $this->render_image($filename, $top, $right, $bottom, $left, $width, $height, $quality, $format);
-            $this->cache->save($key, $image);
-        }
-        
-        echo $image;
-        
-        exit;
+        $this->format = $format;
     }
     
-    private function render_image(
-        $filename, 
-        $top, 
-        $right, 
-        $bottom, 
-        $left, 
-        $width, 
-        $height, 
-        $quality, 
-        $format
-    )
+    public function get_width()
     {
-        $image = new Imgs\Image($filename);
+        return $this->output_width;
+    }
+    
+    public function get_height()
+    {
+        return $this->output_height;
+    }
+    
+    public function output()
+    {
+        // Format Validation
         
-        if(isset($width) || isset($height))
-        {
-            $image->resize($width, $height);
-        }
+        $original_format = pathinfo($this->image, PATHINFO_EXTENSION);
+        $output_format = $this->format;
         
-        $rendered_image = $image->get_image();
-        
-        
-        ob_start();
-        
-        switch($format)
-        {
-            case "png":
-                
-                imagepng($rendered_image, quality: $quality);
-                break;
+        if(!isset($output_format))
+            $output_format = $original_format;
             
-            case "jpeg":
-            case "jpg":
-            default:
-                
-                imagejpeg($rendered_image, quality: $quality);
-                break;
+        if($original_format == "jpeg") $original_format = "jpg";
+        if($output_format == "jpeg") $output_format = "jpg";
+            
+        if(!in_array($original_format, self::SUPPORTED_FORMATS))
+            throw new \Exception("Source image format $original_format is not supported.");
+            
+        if(!in_array($output_format, self::SUPPORTED_FORMATS))
+            throw new \Exception("Output image format $output_format is not supported.");
+        
+        
+        // Cache
+        
+        $key = $this->image . "." . $this->quality . "." . $output_format;
+        
+        $cached_image = $this->cache_dir . urlencode($key);
+        
+        if(!file_exists($cached_image))
+        {
+            switch($original_format)
+            {
+                case "png":
+                    $image = imagecreatefrompng($this->image);
+                    break;
+                    
+                case "jpg":
+                default:
+                    $image = imagecreatefromjpeg($this->image);
+                    break;
+            }
+            
+            switch($output_format)
+            {
+                case "png":
+                    imagepng($image, $cached_image, $this->quality);
+                    break;
+                    
+                case "jpg":
+                default:
+                    imagejpeg($image, $cached_image, $this->quality);
+                    break;
+            }
         }
         
-        return ob_get_clean();
+        
+        // Output
+        
+        header("Content-type: " . mime_content_type($cached_image));
+        header('Content-Length: ' . filesize($cached_image));
+        readfile($cached_image);
     }
 }
