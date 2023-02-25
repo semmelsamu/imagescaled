@@ -232,6 +232,9 @@ class Imgs
             
             $output_image = imagecreatetruecolor($this->dst_width, $this->dst_height);
             
+            imagealphablending($output_image, false);
+            imagesavealpha($output_image, true);
+            
             imagecopyresampled(
                 $output_image,
                 $original_image,
