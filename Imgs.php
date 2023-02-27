@@ -73,7 +73,7 @@ class Imgs
      */
     public function string(string $string)
     {
-        $this->string = $string;
+        $this->html_src = $string;
         
         $parsed_url = parse_url($string);
         
@@ -84,6 +84,10 @@ class Imgs
         
         $this->prepare(
             filename: $parsed_url["path"],
+            top: isset($parsed_string["t"]) ? intval($parsed_string["t"]) : null,
+            right: isset($parsed_string["r"]) ? intval($parsed_string["r"]) : null,
+            bottom: isset($parsed_string["b"]) ? intval($parsed_string["b"]) : null,
+            left: isset($parsed_string["l"]) ? intval($parsed_string["l"]) : null,
             width: isset($parsed_string["w"]) ? intval($parsed_string["w"]) : null,
             height: isset($parsed_string["h"]) ? intval($parsed_string["h"]) : null,
             quality: isset($parsed_string["q"]) ? intval($parsed_string["q"]) : null,
@@ -112,6 +116,10 @@ class Imgs
      */
     public function prepare(
         string $filename,
+        ?int $top = null,
+        ?int $right = null,
+        ?int $bottom = null,
+        ?int $left = null,
         ?int $width = null,
         ?int $height = null,
         ?int $quality = null,
@@ -120,37 +128,38 @@ class Imgs
     {
         // Capture Parameters    
     
-        $this->original_filename = $filename;
-        $this->original_root_filename = $this->root_path . $filename;
-        
-        list($this->original_width, $this->original_height) = getimagesize($this->original_root_filename);
-        
-        $this->width = $width;
-        $this->height = $height;
-        
-        $this->quality = $quality ?? -1;
-        
-        
-        // Validate Format 
-        
-        $this->original_format = pathinfo($this->original_root_filename, PATHINFO_EXTENSION);
-        $this->output_format = $format;
-        
-        if(!isset($this->output_format))
-            $this->output_format = $this->original_format;
+        # Src 
+        if(!isset($this->html_src))
+            $this->html_src = $filename;
             
-        if($this->original_format == "jpeg") $this->original_format = "jpg";
-        if($this->output_format == "jpeg") $this->output_format = "jpg";
-            
-        if(!in_array($this->original_format, self::SUPPORTED_FORMATS))
-            throw new \Exception("Source image format $this->original_format is not supported.");
-            
-        if(!in_array($this->output_format, self::SUPPORTED_FORMATS))
-            throw new \Exception("Output image format $this->output_format is not supported.");
+        # Path
+        $this->original_path = $this->root_path . $filename;
+        
+        # Crop
+        $this->output_top = $top ?? 0;
+        $this->output_right = $right ?? 0;
+        $this->output_bottom = $bottom ?? 0;
+        $this->output_left = $left ?? 0;
+        
+        # Original Dimensions
+        list($this->original_width, $this->original_height) = getimagesize($this->original_path);
+        
+        # Output Dimensions
+        $this->output_width = $width;
+        $this->output_height = $height;
+        
+        # Quality
+        $this->output_quality = $quality ?? -1;
+        
+        # Format
+        $this->original_format = pathinfo($this->original_path, PATHINFO_EXTENSION);
+        $this->output_format = $format ?? $this->original_format;
         
         
+        // Validate and Prepare
+        
+        $this->validate_format();
         $this->calculate_rectangles();
-        
         return $this;
     }
     
@@ -170,25 +179,34 @@ class Imgs
      */
     public function image()
     {
-        $this->load_original_image();
-        $this->render_image();
         
         if($this->enable_cache)
         {
-            $this->make_path_to_cached_image();
+            $this->calculate_cached_path();
         
-            if(!file_exists($this->path_to_cached_image))
+            if(!file_exists($this->cached_path))
             {
+                $this->load_original_image();
+                
+                $this->render_image();
+                imagedestroy($this->original_image);
+                
                 $this->cache_rendered_image();
+                imagedestroy($this->rendered_image);
             }
             
             $this->output_cached_image();
         }
         else
         {
+            $this->load_original_image();
+            
+            $this->render_image();
+            imagedestroy($this->original_image);
+            
             $this->output_rendered_image();
+            imagedestroy($this->rendered_image);
         }
-        
         
         exit;
     }
@@ -198,6 +216,25 @@ class Imgs
     # Helper Functions
     
     # ~
+        
+    /**
+     * validate_format
+     * 
+     * Checks if the format specified is actually supported. If not, throws an exception.
+     *
+     * @return void
+     */
+    protected function validate_format()
+    {
+        if($this->original_format == "jpeg") $this->original_format = "jpg";
+        if($this->output_format == "jpeg") $this->output_format = "jpg";
+            
+        if(!in_array($this->original_format, self::SUPPORTED_FORMATS))
+            throw new \Exception("Source image format $this->original_format is not supported.");
+            
+        if(!in_array($this->output_format, self::SUPPORTED_FORMATS))
+            throw new \Exception("Output image format $this->output_format is not supported.");
+    }
     
     /**
      * calculate_rectangles
@@ -209,54 +246,81 @@ class Imgs
      */
     protected function calculate_rectangles()
     {
+        // Import Values for easier reading
+        
         $original_width = $this->original_width;
         $original_height = $this->original_height;
         
-        $output_width = $this->width;
-        $output_height = $this->height;
-                    
-        if(!isset($output_height) && !isset($output_width))
+        $width = $this->output_width;
+        $height = $this->output_height;
+        
+        $top = $this->output_top;
+        $right = $this->output_right;
+        $bottom = $this->output_bottom;
+        $left = $this->output_left;
+        
+        $max_size = $this->max_size;
+        
+        $src_x = 0;
+        $src_y = 0;
+        $src_width = $original_width;
+        $src_height = $original_height;
+        
+        
+        // Get dimensions
+        
+        if(!isset($width) && !isset($height))
         {
-            $output_width = $original_width;
-            $output_height = $original_height;
+            $width = $original_width;
+            $height = $original_height;
         }
         
-        else if(isset($output_width) && !isset($output_height))
-            $output_height = $original_height * ($output_width / $original_width);
-            
-        else if(isset($output_height) && !isset($output_width))
-            $output_width = $original_width * ($output_height / $original_height);
         
-        if(isset($this->max_size))
-        {
-            if(isset($output_width) && $output_width > $this->max_size)
-                $output_width = $this->max_size;
+        // Auto-calc missing dimensions
+        
+        if(!isset($width) && isset($height))
+            $width = $original_width * ($height / $original_height);
             
-            if(isset($output_height) && $output_height > $this->max_size)
-                $output_height = $this->max_size;
+        if(isset($width) && !isset($height))
+            $height = $original_height * ($width / $original_width);
+        
+        
+        // Make sure dimensions are not larger than max size
+        
+        if($width > $height && $width > $max_size)
+        {
+            $height = $height * ($max_size / $width);
+            $width = $max_size;
+        }
+        else if($height > $max_size)
+        {
+            $width = $width * ($max_size / $height);
+            $height = $max_size;
         }
         
         
-        $this->dst_x = intval(round(0));
-        $this->dst_y = intval(round(0));
-        $this->src_x = intval(round(0));
-        $this->src_y = intval(round(0));
-        $this->dst_width = intval(round($output_width));
-        $this->dst_height = intval(round($output_height));
-        $this->src_width = intval(round($this->original_width));
-        $this->src_height = intval(round($this->original_height));
+        // Export Values
+        
+        $this->dst_x      = 0;
+        $this->dst_y      = 0;
+        $this->src_x      = intval(round($src_x));
+        $this->src_y      = intval(round($src_y));
+        $this->dst_width  = intval(round($width));
+        $this->dst_height = intval(round($height));
+        $this->src_width  = intval(round($src_width));
+        $this->src_height = intval(round($src_height));
     }
         
     /**
-     * make_path_to_cached_image
+     * calculate_cached_path
      * 
      * Calculates the path to the cached image.
      *
      * @return void
      */
-    protected function make_path_to_cached_image()
+    protected function calculate_cached_path()
     {
-        $key = $this->original_root_filename .
+        $key = $this->original_path .
             "-" . $this->dst_x .
             "-" . $this->dst_y .
             "-" . $this->src_x .
@@ -265,10 +329,10 @@ class Imgs
             "-" . $this->dst_height .
             "-" . $this->src_width .
             "-" . $this->src_height .
-            "-" . $this->quality .
+            "-" . $this->output_quality .
             "." . $this->output_format;
             
-        $this->path_to_cached_image = $this->cache_path . urlencode($key);
+        $this->cached_path = $this->cache_path . urlencode($key);
     }
         
     /**
@@ -283,12 +347,12 @@ class Imgs
         switch($this->original_format)
         {
             case "png":
-                $this->original_image = imagecreatefrompng($this->original_root_filename);
+                $this->original_image = imagecreatefrompng($this->original_path);
                 break;
                 
             case "jpg":
             default:
-                $this->original_image = imagecreatefromjpeg($this->original_root_filename);
+                $this->original_image = imagecreatefromjpeg($this->original_path);
                 break;
         }
     }
@@ -335,12 +399,12 @@ class Imgs
         switch($this->output_format)
         {
             case "png":
-                imagepng($this->rendered_image, $this->path_to_cached_image, $this->quality);
+                imagepng($this->rendered_image, $this->cached_path, $this->output_quality);
                 break;
                 
             case "jpg":
             default:
-                imagejpeg($this->rendered_image, $this->path_to_cached_image, $this->quality);
+                imagejpeg($this->rendered_image, $this->cached_path, $this->output_quality);
                 break;
         }
     }
@@ -355,9 +419,10 @@ class Imgs
      */
     protected function output_cached_image()
     {
-        header("Content-Type: " . mime_content_type($this->path_to_cached_image));
-        header('Content-Length: ' . filesize($this->path_to_cached_image));
-        readfile($this->path_to_cached_image);
+        header('Content-Length: ' . filesize($this->cached_path));
+        header("Content-Type: " . mime_content_type($this->cached_path));
+        
+        readfile($this->cached_path);
     }
         
     /**
@@ -374,13 +439,13 @@ class Imgs
         {
             case "png":
                 header("Content-Type: image/png");
-                imagepng($this->rendered_image, quality: $this->quality);
+                imagepng($this->rendered_image, quality: $this->output_quality);
                 break;
                 
             case "jpg":
             default:
                 header("Content-Type: image/jpeg");
-                imagejpeg($this->rendered_image, quality: $this->quality);
+                imagejpeg($this->rendered_image, quality: $this->output_quality);
                 break;
         }
     }
@@ -397,7 +462,7 @@ class Imgs
      */
     public function html(?string $alt = null)
     {
-        $src = 'src="' . ($this->string ?? $this->original_filename) . '"';
+        $src = 'src="' . $this->html_src . '"';
         $width = 'width="' . $this->dst_width . '"';
         $height = 'height="' . $this->dst_height . '"';
         $alt = isset($alt) ? 'alt="' . $alt . '"' : '';
