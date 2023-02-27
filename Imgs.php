@@ -19,14 +19,18 @@ class Imgs
      * __construct
      * 
      * @param string $root The prefix for where images will be loaded.
+     * @param ?int $max_size The maximum size of a side of the image. When trying to scale an image 
+     *                       larger than that, it will be scaled to this. If not set (not recommended), 
+     *                       the image can be resized as large as PHP can handle it.
      * @param string $cache_dir The path to the directory where the rendered images will be stored.
      * @param int $max_cache_files The number of maximal images in the cache. If more 
-     *                              images are added, old ones will be deleted.
+     *                             images are added, old ones will be deleted.
      *
      * @return self
      */
     public function __construct(
         protected string $root = "./",
+        protected ?int $max_size = 2000,
         protected string $cache_dir = "cache/",
         protected int $max_cache_files = 100
     )
@@ -146,7 +150,7 @@ class Imgs
         
         $output_width = $this->width;
         $output_height = $this->height;
-        
+                    
         if(!isset($output_height) && !isset($output_width))
         {
             $output_width = $original_width;
@@ -158,11 +162,16 @@ class Imgs
             
         else if(isset($output_height) && !isset($output_width))
             $output_width = $original_width * ($output_height / $original_height);
-            
-        else
+        
+        if(isset($this->max_size))
         {
-            // todo
+            if(isset($output_width) && $output_width > $this->max_size)
+                $output_width = $this->max_size;
+            
+            if(isset($output_height) && $output_height > $this->max_size)
+                $output_height = $this->max_size;
         }
+        
         
         $this->dst_x = intval(round(0));
         $this->dst_y = intval(round(0));
