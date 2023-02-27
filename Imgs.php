@@ -267,36 +267,70 @@ class Imgs
         $src_height = $original_height;
         
         
-        // Get dimensions
+        // Util variables
         
+        $crop_w = $src_width - $left - $right;
+        $crop_h = $src_height - $top - $bottom;
+
+        $src_ratio = $src_height / $src_width;
+        
+        
+        // Default dimensions
+
         if(!isset($width) && !isset($height))
         {
-            $width = $original_width;
-            $height = $original_height;
+            $width = $crop_w;
+            $height = $crop_h;
         }
         
         
-        // Auto-calc missing dimensions
+        // Auto calculation missing dimensions
         
-        if(!isset($width) && isset($height))
-            $width = $original_width * ($height / $original_height);
-            
-        if(isset($width) && !isset($height))
-            $height = $original_height * ($width / $original_width);
+        if(isset($height) && !isset($width))
+            $width = $crop_w * ($height / $crop_h);
+        
+        else if(isset($width) && !isset($height))
+            $height = $crop_h * ($width / $crop_w);
         
         
-        // Make sure dimensions are not larger than max size
-        
-        if($width > $height && $width > $max_size)
+        // Max size
+
+        if(isset($max_size))
         {
-            $height = $height * ($max_size / $width);
-            $width = $max_size;
+            $ratio = $height / $width;
+
+            if($width > $max_size)
+            {
+                $width = $max_size;
+                $height = $width * $ratio;
+            }
+
+            if($height > $max_size)
+            {
+                $height = $max_size;
+                $width = $height / $ratio;
+            }
         }
-        else if($height > $max_size)
+        
+        
+        // Crop image if aspect ratio changes
+
+        $dst_ratio = $height / $width;
+
+        $cut_w = $crop_w;
+        $cut_h = $crop_w * $dst_ratio;
+
+        if($cut_h > $crop_h)
         {
-            $width = $width * ($max_size / $height);
-            $height = $max_size;
+            $cut_h = $crop_h;
+            $cut_w = $crop_h / $dst_ratio;
         }
+
+        $src_x = $left + ($crop_w - $cut_w) / 2;
+        $src_y = $top + ($crop_h - $cut_h) / 2;
+
+        $src_width = $cut_w;
+        $src_height = $cut_h;
         
         
         // Export Values
