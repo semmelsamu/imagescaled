@@ -7,6 +7,12 @@ namespace semmelsamu;
 
 class Imgs
 {
+    # ~
+    
+    # Class Constants
+    
+    # ~
+    
     /**
      * SUPPORTED_FORMATS
      * 
@@ -14,7 +20,13 @@ class Imgs
      * Notice: "jpeg" is not in the list, as it gets converted to "jpg".
      */
     const SUPPORTED_FORMATS = ["jpg", "png"];
-        
+    
+    # ~
+    
+    # Constructor
+    
+    # ~
+    
     /**
      * __construct
      * 
@@ -22,6 +34,7 @@ class Imgs
      * @param ?int $max_size The maximum size of a side of the image. When trying to scale an image 
      *                       larger than that, it will be scaled to this. If not set (not recommended), 
      *                       the image can be resized as large as PHP can handle it.
+     * @param bool $enable_cache Specifies if the caching function should be used.
      * @param string $cache_path The path to the directory where the rendered images will be stored.
      * @param int $max_cache_files The number of maximal images in the cache. If more 
      *                             images are added, old ones will be deleted.
@@ -31,13 +44,23 @@ class Imgs
     public function __construct(
         protected string $root_path = "./",
         protected ?int $max_size = 2000,
+        protected bool $enable_cache = true,
         protected string $cache_path = "cache/",
         protected int $max_cache_files = 100
     )
     {
-        if(!is_dir($cache_path))
-            mkdir($cache_path);
+        if($this->enable_cache)
+        {
+            if(!is_dir($this->cache_path))
+                mkdir($this->cache_path);
+        }
     }
+    
+    # ~ 
+    
+    # Prepare Functions
+    
+    # ~
         
     /**
      * string
@@ -125,21 +148,62 @@ class Imgs
         if(!in_array($this->output_format, self::SUPPORTED_FORMATS))
             throw new \Exception("Output image format $this->output_format is not supported.");
         
-        // Rectangles
         
         $this->calculate_rectangles();
         
-        
-        // Return
-        
         return $this;
     }
+    
+    # ~
+    
+    # Image Function
+    
+    # ~
         
+    /**
+     * image
+     * 
+     * If not cached, renders and saves the prepared image to cache.
+     * Then, outputs the corresponding header and image to the user. Finally, ends the script.
+     *
+     * @return void
+     */
+    public function image()
+    {
+        $this->load_original_image();
+        $this->render_image();
+        
+        if($this->enable_cache)
+        {
+            $this->calculate_path_to_cached_image();
+        
+            if(!file_exists($this->path_to_cached_image))
+            {
+                $this->cache_rendered_image();
+            }
+            
+            $this->output_cached_image();
+        }
+        else
+        {
+            $this->output_rendered_image();
+        }
+        
+        
+        exit;
+    }
+    
+    # ~
+    
+    # Helper Functions
+    
+    # ~
+    
     /**
      * calculate_rectangles
      * 
      * Calculates the coordinates and dimensions of the source and destination rectangles,
-     * used later to resize the image. @see output()
+     * used later to resize the image. @see image()
      *
      * @return void
      */
@@ -183,53 +247,7 @@ class Imgs
         $this->src_height = intval(round($this->original_height));
     }
     
-    public function get_width()
-    {
-        return $this->dst_width;
-    }
-    
-    public function get_height()
-    {
-        return $this->dst_height;
-    }
-        
-    /**
-     * image
-     * 
-     * If not cached, renders and saves the prepared image to cache.
-     * Then, outputs the corresponding header and image to the user. Finally, ends the script.
-     *
-     * @return void
-     */
-    public function image()
-    {
-        $path_to_cached_image = $this->get_path_to_cached_image();
-        
-        if(!file_exists($path_to_cached_image))
-        {
-            $original_image = $this->load_original_image();
-            
-            $rendered_image = $this->render_image(
-                $original_image,
-                $this->dst_x,
-                $this->dst_y,
-                $this->src_x,
-                $this->src_y,
-                $this->dst_width,
-                $this->dst_height,
-                $this->src_width,
-                $this->src_height
-            );
-            
-            $this->cache_image($rendered_image, $path_to_cached_image, $this->quality);
-        }
-        
-        $this->output($path_to_cached_image);
-        
-        exit;
-    }
-    
-    protected function get_path_to_cached_image()
+    protected function calculate_path_to_cached_image()
     {
         $key = $this->original_root_filename .
             "-" . $this->dst_x .
@@ -243,81 +261,82 @@ class Imgs
             "-" . $this->quality .
             "." . $this->output_format;
             
-        return $this->cache_path . urlencode($key);
+        $this->path_to_cached_image = $this->cache_path . urlencode($key);
     }
     
     protected function load_original_image()
     {
-        $original_image = null;
-        
         switch($this->original_format)
         {
             case "png":
-                $original_image = imagecreatefrompng($this->original_root_filename);
+                $this->original_image = imagecreatefrompng($this->original_root_filename);
                 break;
                 
             case "jpg":
             default:
-                $original_image = imagecreatefromjpeg($this->original_root_filename);
+                $this->original_image = imagecreatefromjpeg($this->original_root_filename);
                 break;
         }
-        
-        return $original_image;
     }
     
-    protected function cache_image($image, $filename, $quality)
+    protected function render_image()
+    {
+        $this->rendered_image = imagecreatetruecolor($this->dst_width, $this->dst_height);
+            
+        imagealphablending($this->rendered_image, false);
+        imagesavealpha($this->rendered_image, true);
+        
+        imagecopyresampled(
+            $this->rendered_image,
+            $this->original_image,
+            $this->dst_x,
+            $this->dst_y,
+            $this->src_x,
+            $this->src_y,
+            $this->dst_width,
+            $this->dst_height,
+            $this->src_width,
+            $this->src_height
+        );
+    }
+    
+    protected function cache_rendered_image()
     {
         switch($this->output_format)
         {
             case "png":
-                imagepng($image, $filename, $quality);
+                imagepng($this->rendered_image, $this->path_to_cached_image, $this->quality);
                 break;
                 
             case "jpg":
             default:
-                imagejpeg($image, $filename, $quality);
+                imagejpeg($this->rendered_image, $this->path_to_cached_image, $this->quality);
                 break;
         }
     }
     
-    protected function render_image(
-        $image,
-        $dst_x,
-        $dst_y,
-        $src_x,
-        $src_y,
-        $dst_width,
-        $dst_height,
-        $src_width,
-        $src_height
-    )
+    protected function output_cached_image()
     {
-        $result = imagecreatetruecolor($dst_width, $dst_height);
-            
-        imagealphablending($result, false);
-        imagesavealpha($result, true);
-        
-        imagecopyresampled(
-            $result,
-            $image,
-            $dst_x,
-            $dst_y,
-            $src_x,
-            $src_y,
-            $dst_width,
-            $dst_height,
-            $src_width,
-            $src_height
-        );
-        
-        return $result;
+        header("Content-Type: " . mime_content_type($this->path_to_cached_image));
+        header('Content-Length: ' . filesize($this->path_to_cached_image));
+        readfile($this->path_to_cached_image);
     }
     
-    protected function output($filename)
+    protected function output_rendered_image()
     {
-        header("Content-Type: " . mime_content_type($filename));
-        header('Content-Length: ' . filesize($filename));
-        readfile($filename);
+        switch($this->output_format)
+        {
+            case "png":
+                header("Content-Type: image/png");
+                imagepng($this->rendered_image, quality: $this->quality);
+                break;
+                
+            case "jpg":
+            default:
+                header("Content-Type: image/jpeg");
+                imagejpeg($this->rendered_image, quality: $this->quality);
+                break;
+        }
     }
     
     public function html(?string $alt = null)
