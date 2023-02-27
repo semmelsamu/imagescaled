@@ -193,6 +193,8 @@ class Imgs
                 
                 $this->cache_rendered_image();
                 imagedestroy($this->rendered_image);
+                
+                $this->invalidate_cache();
             }
             
             $this->output_cached_image();
@@ -460,6 +462,39 @@ class Imgs
     }
         
     /**
+     * invalidate_cache
+     * 
+     * When there are more files in the cache folder than $max_cache_files, they will be deleted.
+     *
+     * @return void
+     */
+    protected function invalidate_cache()
+    {
+        // Get Files in cache
+
+        $all_files = scandir($this->cache_path);
+
+        $files = array_diff($all_files, array('.', '..'));
+
+
+        // Sort by last modified
+
+        usort($files, function($a, $b) {
+            return filemtime($this->cache_path . $a) - filemtime($this->cache_path . $b);
+        });
+
+
+        // If there are more files than $max_cache_files, delete them
+
+        $files_to_delete = sizeof($files) - $this->max_cache_files;
+
+        for($i = 0; $i < $files_to_delete; $i++)
+        {
+            unlink($this->cache_path . array_values($files)[$i]);
+        }
+    }
+        
+    /**
      * output_rendered_image
      * 
      * Outputs rendered image and corresponding headers to the user. 
@@ -496,6 +531,9 @@ class Imgs
      */
     public function html(?string $alt = null)
     {
+        if(!file_exists($this->original_path))
+            return;
+        
         $src = 'src="' . $this->html_src . '"';
         $width = 'width="' . $this->dst_width . '"';
         $height = 'height="' . $this->dst_height . '"';
