@@ -175,7 +175,7 @@ class Imgs
         
         if($this->enable_cache)
         {
-            $this->calculate_path_to_cached_image();
+            $this->make_path_to_cached_image();
         
             if(!file_exists($this->path_to_cached_image))
             {
@@ -246,8 +246,15 @@ class Imgs
         $this->src_width = intval(round($this->original_width));
         $this->src_height = intval(round($this->original_height));
     }
-    
-    protected function calculate_path_to_cached_image()
+        
+    /**
+     * make_path_to_cached_image
+     * 
+     * Calculates the path to the cached image.
+     *
+     * @return void
+     */
+    protected function make_path_to_cached_image()
     {
         $key = $this->original_root_filename .
             "-" . $this->dst_x .
@@ -263,7 +270,14 @@ class Imgs
             
         $this->path_to_cached_image = $this->cache_path . urlencode($key);
     }
-    
+        
+    /**
+     * load_original_image
+     * 
+     * Loads the original image into a GdImage object.
+     *
+     * @return void
+     */
     protected function load_original_image()
     {
         switch($this->original_format)
@@ -278,7 +292,15 @@ class Imgs
                 break;
         }
     }
-    
+        
+    /**
+     * render_image
+     * 
+     * Renders the image by resampling it.
+     * @see calculate_rectangles()
+     *
+     * @return void
+     */
     protected function render_image()
     {
         $this->rendered_image = imagecreatetruecolor($this->dst_width, $this->dst_height);
@@ -299,7 +321,15 @@ class Imgs
             $this->src_height
         );
     }
-    
+        
+    /**
+     * cache_rendered_image
+     * 
+     * Saves the rendered image to the cache location.
+     * @see render_image()
+     *
+     * @return void
+     */
     protected function cache_rendered_image()
     {
         switch($this->output_format)
@@ -314,14 +344,30 @@ class Imgs
                 break;
         }
     }
-    
+        
+    /**
+     * output_cached_image
+     * 
+     * Reads the contents of the cached image and outputs it and the corresponding headers to the user.
+     * @see cache_rendered_image()
+     *
+     * @return void
+     */
     protected function output_cached_image()
     {
         header("Content-Type: " . mime_content_type($this->path_to_cached_image));
         header('Content-Length: ' . filesize($this->path_to_cached_image));
         readfile($this->path_to_cached_image);
     }
-    
+        
+    /**
+     * output_rendered_image
+     * 
+     * Outputs rendered image and corresponding headers to the user. 
+     * @see render_image()
+     *
+     * @return void
+     */
     protected function output_rendered_image()
     {
         switch($this->output_format)
@@ -338,7 +384,17 @@ class Imgs
                 break;
         }
     }
-    
+        
+    /**
+     * html
+     * 
+     * Returns a HTML image tag, with the source of the image, and matching the 
+     * width and height of the image after cropping. Useful for preventing layout shifting.
+     *
+     * @param  mixed $alt The alt text of the image.
+     * @return string The HTML image tag. Example:    <img src="image.jpg?w=800" 
+     *                                                 width="800" height="600" alt="Alt text.">
+     */
     public function html(?string $alt = null)
     {
         $src = 'src="' . ($this->string ?? $this->original_filename) . '"';
