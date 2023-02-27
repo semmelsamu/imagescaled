@@ -525,11 +525,11 @@ class Imgs
      * Returns a HTML image tag, with the source of the image, and matching the 
      * width and height of the image after cropping. Useful for preventing layout shifting.
      *
-     * @param  mixed $alt The alt text of the image.
-     * @return string The HTML image tag. Example:    <img src="image.jpg?w=800" 
-     *                                                 width="800" height="600" alt="Alt text.">
+     * @param  ?string $alt The alt text of the image.
+     * @return string  The HTML image tag. 
+     *                 Example:    <img src="image.jpg?w=800" width="800" height="600" alt="Alt text.">
      */
-    public function html(?string $alt = null)
+    public function html(?string $alt = null, string $wrapper = "%img%")
     {
         if(!file_exists($this->original_path))
             return;
@@ -539,6 +539,6 @@ class Imgs
         $height = 'height="' . $this->dst_height . '"';
         $alt = isset($alt) ? 'alt="' . $alt . '"' : '';
         
-        return "<img $src $width $height $alt>";
+        return "<img onload=\"this.classList.add('loaded')\" $src $width $height $alt>";
     }
 }
