@@ -529,7 +529,7 @@ class Imgs
      * @return string  The HTML image tag. 
      *                 Example:    <img src="image.jpg?w=800" width="800" height="600" alt="Alt text.">
      */
-    public function html(?string $alt = null, string $wrapper = "%img%")
+    public function html(...$attributes)
     {
         if(!file_exists($this->original_path))
             return;
@@ -537,8 +537,12 @@ class Imgs
         $src = 'src="' . $this->html_src . '"';
         $width = 'width="' . $this->dst_width . '"';
         $height = 'height="' . $this->dst_height . '"';
-        $alt = isset($alt) ? 'alt="' . $alt . '"' : '';
         
-        return "<img onload=\"this.classList.add('loaded')\" $src $width $height $alt>";
+        $attribute_string = "";
+        
+        foreach($attributes as $key => $value)
+            $attribute_string .= "$key=\"$value\"";
+        
+        return "<img $src $width $height $attribute_string>";
     }
 }
